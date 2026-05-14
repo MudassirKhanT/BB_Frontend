@@ -214,7 +214,7 @@ export default function ForgotPasswordPage() {
               {generatedToken && (
                 <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-center">
                   <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-1">Your Reset Code</p>
-                  <p className="text-4xl font-black text-blue-700 tracking-[0.3em] py-1">{generatedToken}</p>
+                  <p className="text-2xl sm:text-4xl font-black text-blue-700 tracking-[0.15em] sm:tracking-[0.3em] py-1 break-all">{generatedToken}</p>
                   <p className="text-xs text-blue-400 font-medium mt-1">Expires in 15 minutes</p>
                 </div>
               )}

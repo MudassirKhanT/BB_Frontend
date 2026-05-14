@@ -28,6 +28,8 @@ import ContestDetailPage from "./pages/ContestDetailPage";
 import ContestSolverPage from "./pages/ContestSolverPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import PracticePage from "./pages/PracticePage";
+import JobsPage from "./pages/JobsPage";
+import ProfilePage from "./pages/ProfilePage";
 
 function App() {
   return (
@@ -64,6 +66,8 @@ function App() {
         <Route path="/contests" element={<ContestsPage />} />
         <Route path="/contests/:slug/solve/:problemSlug" element={<ContestSolverPage />} />
         <Route path="/contests/:slug" element={<ContestDetailPage />} />
+        <Route path="/jobs" element={<JobsPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
     </>

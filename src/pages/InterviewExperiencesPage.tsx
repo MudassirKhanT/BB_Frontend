@@ -96,7 +96,7 @@ function SubmitForm({ companies, onClose, onSubmit }: {
                 {companies.map((c) => <option key={c._id} value={c.slug}>{c.name}</option>)}
               </select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1">Role / Position *</label>
                 <input required value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}

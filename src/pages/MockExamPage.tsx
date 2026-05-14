@@ -69,7 +69,7 @@ function ResultView({ result, exam, onReview }: { result: SubmitResult; exam: Ex
           </div>
           <h1 className="text-3xl font-black mb-2">{passed ? "Congratulations!" : "Better luck next time"}</h1>
           <p className="text-white/80 text-lg mb-4">{exam.title}</p>
-          <div className="text-6xl font-black mb-1">{result.percentage}%</div>
+          <div className="text-4xl sm:text-6xl font-black mb-1">{result.percentage}%</div>
           <p className="text-white/70">{result.score}/{result.total} correct · {fmt(result.timeTaken)} taken</p>
           <div className={`inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full font-bold text-sm ${passed ? "bg-green-400/30 text-green-100" : "bg-red-400/30 text-red-100"}`}>
             {passed ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}

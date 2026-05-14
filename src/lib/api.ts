@@ -37,6 +37,13 @@ export const api = {
       body: JSON.stringify(data),
     }).then(handleResponse),
 
+  put: (url: string, data?: unknown) =>
+    fetch(`${API_BASE}${url}`, {
+      method: "PUT",
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    }).then(handleResponse),
+
   delete: (url: string) =>
     fetch(`${API_BASE}${url}`, {
       method: "DELETE",
@@ -82,6 +89,8 @@ export const enrollmentApi = {
 // ── User API ──
 export const userApi = {
   getDashboardStats: () => api.get("/user/dashboard-stats"),
+  getProfile: () => api.get("/user/profile"),
+  updateProfile: (data: unknown) => api.put("/user/profile", data),
 };
 
 // ── Auth API ──
@@ -197,6 +206,19 @@ export const adminUserApi = {
 // ── Chatbot API ──
 export const chatbotApi = {
   chat: (message: string, history: { role: "user" | "model"; text: string }[] = []) => api.post("/chatbot/chat", { message, history }),
+};
+
+// ── Jobs API ──
+export const jobsApi = {
+  getJobs: (params: { keyword?: string; location?: string; category?: string; type?: string; page?: number; source?: string }) => {
+    const qs = new URLSearchParams(
+      Object.entries(params)
+        .filter(([, v]) => v !== undefined && v !== "")
+        .map(([k, v]) => [k, String(v)]),
+    ).toString();
+    return api.get(`/jobs${qs ? `?${qs}` : ""}`);
+  },
+  getStatus: () => api.get("/jobs/status"),
 };
 
 // ── Resource API ──

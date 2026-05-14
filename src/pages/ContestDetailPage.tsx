@@ -445,9 +445,9 @@ export default function ContestDetailPage() {
       {/* Tabs */}
       <div className="bg-white border-b border-slate-100 shadow-sm">
         <div className="max-w-5xl mx-auto px-4">
-          <div className="flex items-center gap-0">
+          <div className="flex items-center gap-0 overflow-x-auto scrollbar-hide">
             {([{ key: "problems" as const, label: "Problems", icon: <ListChecks className="w-4 h-4" /> }, { key: "leaderboard" as const, label: "Leaderboard", icon: <Crown className="w-4 h-4" /> }, ...(isLoggedIn ? [{ key: "submissions" as const, label: "My Submissions", icon: <Code2 className="w-4 h-4" /> }] : [])] as const).map(({ key, label, icon }) => (
-              <button key={key} onClick={() => setTab(key)} className={`flex items-center gap-2 px-5 py-4 text-sm font-semibold border-b-2 transition-colors ${tab === key ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+              <button key={key} onClick={() => setTab(key)} className={`flex items-center gap-2 px-3 sm:px-5 py-4 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${tab === key ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
                 {icon}
                 {label}
               </button>
@@ -532,7 +532,7 @@ export default function ContestDetailPage() {
                       <th className="px-4 py-3 text-left font-bold text-slate-500 w-12">Rank</th>
                       <th className="px-4 py-3 text-left font-bold text-slate-500">Participant</th>
                       <th className="px-4 py-3 text-right font-bold text-slate-500">Score</th>
-                      <th className="px-4 py-3 text-right font-bold text-slate-500">Penalty</th>
+                      <th className="hidden sm:table-cell px-4 py-3 text-right font-bold text-slate-500">Penalty</th>
                       <th className="px-4 py-3 text-right font-bold text-slate-500">Solved</th>
                     </tr>
                   </thead>
@@ -542,7 +542,7 @@ export default function ContestDetailPage() {
                         <td className="px-4 py-3 font-black text-slate-400">{entry.rank <= 3 ? <span className={entry.rank === 1 ? "text-yellow-500" : entry.rank === 2 ? "text-slate-400" : "text-orange-600"}>{entry.rank === 1 ? "🥇" : entry.rank === 2 ? "🥈" : "🥉"}</span> : entry.rank}</td>
                         <td className="px-4 py-3 font-semibold text-slate-900">{entry.username}</td>
                         <td className="px-4 py-3 text-right font-black text-primary">{entry.totalScore}</td>
-                        <td className="px-4 py-3 text-right font-mono text-slate-500">{fmtPenalty(entry.penaltyTime)}</td>
+                        <td className="hidden sm:table-cell px-4 py-3 text-right font-mono text-slate-500">{fmtPenalty(entry.penaltyTime)}</td>
                         <td className="px-4 py-3 text-right font-bold text-slate-700">
                           {entry.solvedCount}/{sortedProblems.length}
                         </td>

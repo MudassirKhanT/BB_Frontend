@@ -5,7 +5,7 @@ import {
   BookOpen, Clock, ArrowLeft, Menu, X, Bookmark,
   FileText, Check, Trophy, Code2, BarChart3, Globe, Zap, TrendingUp,
   Award, AlertTriangle, Info, Lightbulb, List, HelpCircle,
-  Flame, Play, RefreshCw,
+  Flame, Play, RefreshCw, Download, GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -82,9 +82,9 @@ function ContentRenderer({ blocks }: { blocks: ContentBlock[] }) {
         switch (block.type) {
           case "heading": {
             const d = block.data as { level: number; text: string };
-            if (d.level === 1) return <h1 key={idx} className="text-3xl font-black text-slate-900 leading-tight mt-2">{d.text}</h1>;
-            if (d.level === 2) return <h2 key={idx} className="text-2xl font-black text-slate-900 mt-8 mb-4 pb-2 border-b-2 border-blue-100">{d.text}</h2>;
-            return <h3 key={idx} className="text-xl font-bold text-slate-800 mt-6 mb-3">{d.text}</h3>;
+            if (d.level === 1) return <h1 key={idx} className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight mt-2">{d.text}</h1>;
+            if (d.level === 2) return <h2 key={idx} className="text-xl sm:text-2xl font-black text-slate-900 mt-8 mb-4 pb-2 border-b-2 border-blue-100">{d.text}</h2>;
+            return <h3 key={idx} className="text-lg sm:text-xl font-bold text-slate-800 mt-6 mb-3">{d.text}</h3>;
           }
 
           case "paragraph": {
@@ -443,7 +443,7 @@ function NotesPanel({
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl z-50 flex flex-col border-l border-slate-200">
+    <div className="fixed inset-y-0 right-0 w-full sm:w-80 bg-white shadow-2xl z-50 flex flex-col border-l border-slate-200">
       <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-amber-50">
         <div className="flex items-center gap-2">
           <FileText className="w-4 h-4 text-amber-600" />
@@ -601,6 +601,207 @@ export default function CourseLearn() {
 
   const Icon = ICON_MAP[courseIcon] || BookOpen;
 
+  // ── Certificate Generation ────────────────────────────────────────────────
+  const [certDownloading, setCertDownloading] = useState(false);
+
+  const downloadCertificate = async () => {
+    setCertDownloading(true);
+    try {
+      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      const studentName = storedUser?.name || storedUser?.username || storedUser?.email?.split("@")[0] || "Student";
+      const issueDate = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+      // A4 landscape at 150 dpi
+      const W = 1754, H = 1240;
+      const canvas = document.createElement("canvas");
+      canvas.width  = W;
+      canvas.height = H;
+      const ctx = canvas.getContext("2d")!;
+
+      // helper: fill an arbitrary polygon
+      const poly = (pts: [number, number][], color: string) => {
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+      };
+
+      // ── 1. Dark-navy background ──
+      ctx.fillStyle = "#07091e";
+      ctx.fillRect(0, 0, W, H);
+
+      // ── 2. Top-right decorative diagonal shapes ──
+      // dark navy anchor wedge
+      poly([[W*0.66,0],[W,0],[W,H*0.36],[W*0.80,H*0.32]], "#07091e");
+      // blue strips fanning from top-right corner
+      poly([[W*0.57,0],[W*0.76,0],[W*0.54,H*0.30],[W*0.38,H*0.22]], "#12529e");
+      poly([[W*0.67,0],[W*0.84,0],[W*0.63,H*0.28],[W*0.48,H*0.20]], "#1a6ee5");
+      poly([[W*0.77,0],[W*0.92,0],[W*0.74,H*0.24],[W*0.61,H*0.17]], "#3d90f5");
+
+      // ── 3. Bottom-left decorative diagonal shapes ──
+      // dark navy anchor wedge
+      poly([[0,H*0.74],[W*0.22,H],[0,H]], "#07091e");
+      // blue strips
+      poly([[0,H*0.68],[W*0.18,H],[W*0.09,H],[0,H*0.80]], "#1a6ee5");
+      poly([[0,H*0.78],[W*0.12,H],[W*0.05,H],[0,H*0.88]], "#3d90f5");
+      poly([[W*0.06,H],[W*0.26,H],[W*0.17,H*0.83],[W*0.03,H*0.92]], "#12529e");
+      poly([[W*0.14,H],[W*0.30,H],[W*0.22,H*0.86],[W*0.10,H*0.94]], "#1a6ee5");
+
+      // ── 4. White content panel ──
+      const px = 72, py = 128, pw = W - 258, ph = H - 238;
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      // @ts-ignore – roundRect available in modern browsers
+      ctx.roundRect(px, py, pw, ph, 4);
+      ctx.fill();
+
+      // ── 5. "CERTIFICATE" ──
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#07091e";
+      ctx.font = `900 136px "Arial Black", Arial, sans-serif`;
+      // auto-shrink if too wide
+      while (ctx.measureText("CERTIFICATE").width > pw - 320) {
+        const cur = parseInt(ctx.font);
+        ctx.font = ctx.font.replace(`${cur}px`, `${cur - 2}px`);
+      }
+      ctx.fillText("CERTIFICATE", px + 80, py + 178);
+
+      // ── 6. "OF COMPLETION" – blue, letter-spaced ──
+      ctx.font = `bold 36px Arial, sans-serif`;
+      ctx.fillStyle = "#1a6ee5";
+      (ctx as any).letterSpacing = "8px";
+      ctx.fillText("OF COMPLETION", px + 83, py + 240);
+      (ctx as any).letterSpacing = "0px";
+
+      // ── 7. Thin separator ──
+      ctx.strokeStyle = "#d0d8e4";
+      ctx.lineWidth   = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(px + 80, py + 268);
+      ctx.lineTo(px + pw - 40, py + 268);
+      ctx.stroke();
+
+      // ── 8. "This certifies that" ──
+      ctx.font      = "26px Arial, sans-serif";
+      ctx.fillStyle = "#444444";
+      ctx.fillText("This certifies that", px + 80, py + 325);
+
+      // ── 9. Student name ──
+      let namePx = 86;
+      ctx.font = `${namePx}px Arial, sans-serif`;
+      while (ctx.measureText(studentName).width > pw - 220 && namePx > 40) {
+        namePx -= 2;
+        ctx.font = `${namePx}px Arial, sans-serif`;
+      }
+      ctx.fillStyle = "#07091e";
+      ctx.fillText(studentName, px + 80, py + 440);
+
+      // name underline
+      const nw = ctx.measureText(studentName).width;
+      ctx.strokeStyle = "#07091e";
+      ctx.lineWidth   = 2;
+      ctx.beginPath();
+      ctx.moveTo(px + 80, py + 458);
+      ctx.lineTo(px + 80 + nw, py + 458);
+      ctx.stroke();
+
+      // ── 10. "has successfully completed the" ──
+      ctx.font      = "26px Arial, sans-serif";
+      ctx.fillStyle = "#444444";
+      ctx.fillText("has successfully completed the", px + 80, py + 525);
+
+      // ── 11. Course name ──
+      let ctFontSize = 30;
+      ctx.font = `italic bold ${ctFontSize}px Georgia, serif`;
+      const courseLabel = `"${courseTitle}"`;
+      while (ctx.measureText(courseLabel).width > pw - 220 && ctFontSize > 18) {
+        ctFontSize -= 1;
+        ctx.font = `italic bold ${ctFontSize}px Georgia, serif`;
+      }
+      ctx.fillStyle = "#07091e";
+      ctx.fillText(courseLabel, px + 80, py + 572);
+
+      // ── 12. "a full hands-on course by Beyond Basic" ──
+      ctx.font      = "26px Arial, sans-serif";
+      ctx.fillStyle = "#444444";
+      ctx.fillText("a full hands-on course by Beyond Basic", px + 80, py + 618);
+
+      // ── 13. Two signature blocks ──
+      const sigY = py + ph - 118;
+
+      // Left — CEO
+      ctx.font      = "24px Arial, sans-serif";
+      ctx.fillStyle = "#07091e";
+      ctx.fillText("BeyondBasic", px + 80, sigY);
+      ctx.strokeStyle = "#555555";
+      ctx.lineWidth   = 1.5;
+      ctx.beginPath(); ctx.moveTo(px + 80, sigY + 10); ctx.lineTo(px + 80 + 210, sigY + 10); ctx.stroke();
+      ctx.font      = "21px Arial, sans-serif";
+      ctx.fillStyle = "#666666";
+      ctx.fillText("Chief Executive Officer", px + 80, sigY + 42);
+
+      // Right — Training Coordinator
+      const sigRX = px + 500;
+      ctx.font      = "24px Arial, sans-serif";
+      ctx.fillStyle = "#07091e";
+      ctx.fillText("Course Instructor", sigRX, sigY);
+      ctx.strokeStyle = "#555555";
+      ctx.lineWidth   = 1.5;
+      ctx.beginPath(); ctx.moveTo(sigRX, sigY + 10); ctx.lineTo(sigRX + 210, sigY + 10); ctx.stroke();
+      ctx.font      = "21px Arial, sans-serif";
+      ctx.fillStyle = "#666666";
+      ctx.fillText("Training Coordinator", sigRX, sigY + 42);
+
+      // Issue date – bottom-right of white panel
+      ctx.textAlign = "right";
+      ctx.font      = "20px Arial, sans-serif";
+      ctx.fillStyle = "#888888";
+      ctx.fillText(`Issued: ${issueDate}`, px + pw - 40, sigY + 42);
+
+      // ── 14. Dark-navy logo banner (bookmark shape, top-right) ──
+      const bx = W - 218, bw = 162, bh = 285;
+      ctx.beginPath();
+      ctx.moveTo(bx, 0);
+      ctx.lineTo(bx + bw, 0);
+      ctx.lineTo(bx + bw, bh);
+      ctx.lineTo(bx + bw / 2, bh - 44);
+      ctx.lineTo(bx, bh);
+      ctx.closePath();
+      ctx.fillStyle = "#07091e";
+      ctx.fill();
+
+      // "B" with blue gradient
+      const bMx = bx + bw / 2;
+      const bGrad = ctx.createLinearGradient(bMx - 28, 54, bMx + 28, 108);
+      bGrad.addColorStop(0, "#1a72e8");
+      bGrad.addColorStop(1, "#60b8ff");
+      ctx.textAlign = "center";
+      ctx.font      = "bold 74px Arial, sans-serif";
+      ctx.fillStyle = bGrad;
+      ctx.fillText("B", bMx, 106);
+
+      // "BEYOND" / "BASIC"
+      ctx.font      = "bold 22px Arial, sans-serif";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText("BEYOND", bMx, 150);
+      ctx.fillText("BASIC",  bMx, 180);
+
+      // ── 15. Export as PDF ──
+      const { default: jsPDF } = await import("jspdf");
+      const pdf = new (jsPDF as any)({ orientation: "landscape", unit: "mm", format: "a4" });
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      pdf.addImage(imgData, "JPEG", 0, 0, 297, 210);
+      pdf.save(`BeyondBasic_Certificate_${courseTitle.replace(/\s+/g, "_")}.pdf`);
+
+    } catch (err) {
+      console.error("Certificate generation failed:", err);
+    } finally {
+      setCertDownloading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -753,7 +954,7 @@ export default function CourseLearn() {
                         return (
                           <button
                             key={subtopic._id}
-                            onClick={() => { loadSubtopic(subtopic._id); setSidebarOpen(window.innerWidth >= 768 || sidebarOpen); }}
+                            onClick={() => { loadSubtopic(subtopic._id); if (window.innerWidth < 768) setSidebarOpen(false); }}
                             className={`w-full flex items-center gap-2.5 pl-4 pr-3 py-2.5 text-left transition-all group ${
                               isCurrent
                                 ? "bg-blue-50 border-r-2 border-blue-500"
@@ -925,6 +1126,45 @@ export default function CourseLearn() {
                     )}
                   </div>
                 </div>
+
+                {/* Certificate Banner — shown only when course is 100% complete */}
+                {enrollment?.progress === 100 && (
+                  <div className="mt-4 p-5 bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-2xl shadow-md relative overflow-hidden">
+                    {/* Decorative background */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-200/30 rounded-full -translate-y-8 translate-x-8" />
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-yellow-200/30 rounded-full translate-y-6 -translate-x-6" />
+
+                    <div className="relative flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg flex-shrink-0">
+                          <GraduationCap className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-black text-amber-900 text-base">🎉 Congratulations!</p>
+                          <p className="text-amber-700 text-sm font-medium">You've completed <span className="font-bold">{courseTitle}</span>.</p>
+                          <p className="text-amber-600 text-xs mt-0.5">Your certificate is ready to download.</p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={downloadCertificate}
+                        disabled={certDownloading}
+                        className="flex-shrink-0 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white font-bold gap-2 shadow-lg hover:shadow-xl transition-all px-5 py-2.5 h-auto"
+                      >
+                        {certDownloading ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4" />
+                            Download Certificate
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (

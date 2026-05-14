@@ -98,18 +98,18 @@ export default function ProblemOfTheDayPage() {
               <Zap className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-4xl font-black text-slate-900">Problem of the Day</h1>
+              <h1 className="text-2xl sm:text-4xl font-black text-slate-900">Problem of the Day</h1>
               <div className="flex items-center gap-2 text-slate-500 mt-1">
                 <Calendar className="w-4 h-4" />
                 <span>{new Date(potd?.date || "").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</span>
               </div>
             </div>
           </div>
-          <p className="text-slate-600 text-lg">Challenge yourself with today's curated selection of coding and SQL problems. Master both skills in one day!</p>
+          <p className="text-slate-600 text-base sm:text-lg">Challenge yourself with today's curated selection of coding and SQL problems. Master both skills in one day!</p>
         </div>
 
         {/* Problems Grid */}
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid md:grid-cols-2 gap-4 sm:gap-8">
           {/* Coding Problem */}
           {potd?.codingProblem ? (
             <ProblemCard problem={potd.codingProblem} icon={<Code2 className="w-6 h-6" />} label="Coding Challenge" />
