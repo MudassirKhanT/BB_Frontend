@@ -532,8 +532,7 @@ export default function ContestSolverPage() {
           </div>
 
           {/* Code editor */}
-          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-            <div className="flex-1 min-h-0 relative overflow-hidden">
+          <div className="flex-1 min-h-0 relative overflow-hidden">
               <textarea
                 ref={textareaRef}
                 value={code[language]}
@@ -554,7 +553,7 @@ export default function ContestSolverPage() {
                 style={{ fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace", tabSize: 4 }}
               />
             </div>
-            <div className="border-t border-slate-200 bg-slate-50 px-4 py-3">
+            <div className="shrink-0 border-t border-slate-200 bg-slate-50 px-4 py-3">
               <p className="text-xs font-semibold text-slate-500 mb-2">Completions</p>
               <div className="flex flex-wrap gap-2">
                 {completionOptions.length > 0 ? (
@@ -580,8 +579,8 @@ export default function ContestSolverPage() {
 
             {/* Output / Submit Results Panel */}
             <div
-              className="border-t border-slate-300 bg-slate-100 shrink-0 transition-all duration-200 overflow-hidden"
-              style={{ height: outputExpanded ? "220px" : "36px" }}
+              className="shrink-0 flex flex-col border-t border-slate-300 bg-slate-100 transition-all duration-200 overflow-hidden"
+              style={{ height: outputExpanded ? "260px" : "36px" }}
             >
               <div className="flex items-center justify-between border-b border-slate-200 px-4 h-9 shrink-0">
                 <div className="flex items-center">
@@ -607,7 +606,7 @@ export default function ContestSolverPage() {
                 </button>
               </div>
 
-              <div className="h-[184px] overflow-y-auto">
+              <div className="flex-1 min-h-0 overflow-y-auto">
                 {/* Run Output */}
                 {outputTab === "output" && (
                   <div className="p-4">
@@ -713,6 +712,5 @@ export default function ContestSolverPage() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

@@ -635,7 +635,7 @@ export default function ProblemSolver() {
         </div>
 
         {/* ── RIGHT: Editor + Output ── */}
-        <div className="w-full h-[55%] md:h-full md:flex-1 flex flex-col overflow-hidden bg-slate-100">
+        <div className="w-full h-[55%] md:h-full md:flex-1 flex flex-col overflow-hidden bg-slate-900">
           {/* Editor Toolbar */}
           <div className="flex items-center justify-between px-4 py-2 bg-slate-800 border-b border-slate-700 shrink-0">
             <div className="flex items-center gap-1 bg-slate-900 rounded-lg p-0.5">
@@ -657,95 +657,92 @@ export default function ProblemSolver() {
             </div>
           </div>
 
-          {/* Editor area */}
-          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-            {/* Code textarea + suggestions overlay */}
-            <div className="flex-1 min-h-0 relative overflow-hidden">
-              <textarea
-                ref={textareaRef}
-                value={currentCode}
-                onChange={(e) => {
-                  const value  = e.target.value;
-                  const cursor = e.target.selectionStart;
-                  setCode((prev) => ({ ...prev, [language]: value }));
-                  updateSuggestions(value, cursor);
-                }}
-                onKeyDown={handleKeyDown}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
-                spellCheck={false}
-                className="absolute inset-0 w-full h-full bg-slate-900 text-slate-100 font-mono text-sm p-4 resize-none outline-none leading-6 selection:bg-blue-700/50 overflow-y-auto"
-                style={{ fontFamily: "'JetBrains Mono','Fira Code','Cascadia Code',Consolas,'Courier New',monospace", tabSize: 4 }}
-                placeholder="Write your solution here..."
-              />
+          {/* ── Code editor — fills all space between toolbar and output ── */}
+          <div className="flex-1 min-h-0 relative overflow-hidden">
+            <textarea
+              ref={textareaRef}
+              value={currentCode}
+              onChange={(e) => {
+                const value  = e.target.value;
+                const cursor = e.target.selectionStart;
+                setCode((prev) => ({ ...prev, [language]: value }));
+                updateSuggestions(value, cursor);
+              }}
+              onKeyDown={handleKeyDown}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+              spellCheck={false}
+              className="absolute inset-0 w-full h-full bg-slate-900 text-slate-100 font-mono text-sm p-4 resize-none outline-none leading-6 selection:bg-blue-700/50 overflow-y-auto"
+              style={{ fontFamily: "'JetBrains Mono','Fira Code','Cascadia Code',Consolas,'Courier New',monospace", tabSize: 4 }}
+              placeholder="Write your solution here..."
+            />
 
-              {/* Autocomplete dropdown */}
-              {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute left-4 bg-slate-800 border border-slate-600 rounded-lg shadow-2xl z-50 w-80 max-h-52 overflow-y-auto"
-                  style={{ top: "auto", bottom: "8px" }}>
-                  <div className="px-3 py-1.5 border-b border-slate-700 flex items-center gap-2">
-                    <Code2 className="w-3 h-3 text-blue-400" />
-                    <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Completions for "{suggestionPrefix}"</span>
-                    <span className="ml-auto text-[9px] text-slate-600">Tab/↵ to insert · Esc to close</span>
-                  </div>
-                  {suggestions.map((s, i) => (
-                    <button
-                      key={i}
-                      onMouseDown={(e) => { e.preventDefault(); applySnippet(s.snippet, textareaRef.current?.selectionStart || 0); }}
-                      className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${i === activeSuggestionIdx ? "bg-blue-600/30 border-l-2 border-blue-500" : "hover:bg-slate-700/50"}`}
-                    >
-                      <span className="text-[10px] font-mono font-bold text-blue-400 w-16 shrink-0 truncate">{s.trigger}</span>
-                      <span className="text-xs text-slate-300 truncate flex-1">{s.label}</span>
-                    </button>
-                  ))}
+            {/* Autocomplete dropdown */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute left-4 bg-slate-800 border border-slate-600 rounded-lg shadow-2xl z-50 w-80 max-h-52 overflow-y-auto"
+                style={{ top: "auto", bottom: "8px" }}>
+                <div className="px-3 py-1.5 border-b border-slate-700 flex items-center gap-2">
+                  <Code2 className="w-3 h-3 text-blue-400" />
+                  <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Completions for "{suggestionPrefix}"</span>
+                  <span className="ml-auto text-[9px] text-slate-600">Tab/↵ to insert · Esc to close</span>
                 </div>
-              )}
+                {suggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    onMouseDown={(e) => { e.preventDefault(); applySnippet(s.snippet, textareaRef.current?.selectionStart || 0); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${i === activeSuggestionIdx ? "bg-blue-600/30 border-l-2 border-blue-500" : "hover:bg-slate-700/50"}`}
+                  >
+                    <span className="text-[10px] font-mono font-bold text-blue-400 w-16 shrink-0 truncate">{s.trigger}</span>
+                    <span className="text-xs text-slate-300 truncate flex-1">{s.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── Output Panel — collapsible strip at the bottom ── */}
+          <div
+            className="shrink-0 flex flex-col overflow-hidden transition-all duration-200 bg-slate-950 border-t border-slate-700"
+            style={{ height: outputExpanded ? "260px" : "36px" }}
+          >
+            {/* Tab bar — always visible, 36px tall */}
+            <div className="flex items-center justify-between px-4 border-b border-slate-800 h-9 shrink-0">
+              <div className="flex items-center gap-0">
+                {[
+                  { id: "output",  icon: Terminal,      label: "Output" },
+                  { id: "results", icon: CheckCircle2,  label: "Results" },
+                  { id: "input",   icon: Code2,         label: "Custom Input" },
+                ].map(({ id, icon: Icon, label }) => (
+                  <button key={id} onClick={() => { setOutputTab(id as any); setOutputExpanded(true); }}
+                    className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition-colors ${outputTab === id ? "border-blue-500 text-blue-400" : "border-transparent text-slate-500 hover:text-slate-300"}`}>
+                    <Icon className="w-3 h-3" />{label}
+                    {id === "output" && hasOutput && <span className={`w-1.5 h-1.5 rounded-full ml-1 ${isError ? "bg-red-500" : "bg-green-500"}`} />}
+                    {id === "results" && submissionResult && (
+                      <span className={`w-1.5 h-1.5 rounded-full ml-1 ${submissionAccepted ? "bg-green-500" : "bg-red-500"}`} />
+                    )}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-3">
+                {hasOutput && output?.time && (
+                  <div className="flex items-center gap-3 text-[10px] text-slate-500">
+                    <span>⏱ {output.time}s</span>
+                    {output.memory && <span>📦 {Math.round(output.memory / 1024)}KB</span>}
+                    <span className={isError ? "text-red-400 font-bold" : "text-green-400 font-bold"}>{output.status || (isError ? "Error" : "Accepted")}</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => setOutputExpanded((v) => !v)}
+                  className="flex items-center gap-1 px-2 py-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
+                  title={outputExpanded ? "Collapse output" : "Expand output"}
+                >
+                  {outputExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+                </button>
+              </div>
             </div>
 
-            {/* Output Panel */}
-            <div
-              className="border-t border-slate-700 bg-slate-900 shrink-0 transition-all duration-200 overflow-hidden"
-              style={{ height: outputExpanded ? "220px" : "36px" }}
-            >
-              {/* Output tabs + toggle */}
-              <div className="flex items-center justify-between px-4 border-b border-slate-700 h-9 shrink-0">
-                <div className="flex items-center gap-0">
-                  {[
-                    { id: "output",  icon: Terminal,      label: "Output" },
-                    { id: "results", icon: CheckCircle2,  label: "Results" },
-                    { id: "input",   icon: Code2,         label: "Custom Input" },
-                  ].map(({ id, icon: Icon, label }) => (
-                    <button key={id} onClick={() => { setOutputTab(id as any); setOutputExpanded(true); }}
-                      className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition-colors ${outputTab === id ? "border-blue-500 text-blue-400" : "border-transparent text-slate-500 hover:text-slate-300"}`}>
-                      <Icon className="w-3 h-3" />{label}
-                      {id === "output" && hasOutput && <span className={`w-1.5 h-1.5 rounded-full ml-1 ${isError ? "bg-red-500" : "bg-green-500"}`} />}
-                      {id === "results" && submissionResult && (
-                        <span className={`w-1.5 h-1.5 rounded-full ml-1 ${submissionAccepted ? "bg-green-500" : "bg-red-500"}`} />
-                      )}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-3">
-                  {/* Runtime info */}
-                  {hasOutput && output?.time && (
-                    <div className="flex items-center gap-3 text-[10px] text-slate-500">
-                      <span>⏱ {output.time}s</span>
-                      {output.memory && <span>📦 {Math.round(output.memory / 1024)}KB</span>}
-                      <span className={isError ? "text-red-400 font-bold" : "text-green-400 font-bold"}>{output.status || (isError ? "Error" : "Accepted")}</span>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => setOutputExpanded((v) => !v)}
-                    className="flex items-center gap-1 px-2 py-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
-                    title={outputExpanded ? "Collapse output" : "Expand output"}
-                  >
-                    {outputExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Output content */}
-              <div className="h-[calc(220px-36px)] overflow-y-auto">
+            {/* Scrollable output content — grows to fill remaining output panel height */}
+            <div className="flex-1 min-h-0 overflow-y-auto">
                 {outputTab === "output" && (
                   <div className="p-4">
                     {running ? (
@@ -886,6 +883,5 @@ export default function ProblemSolver() {
           </div>
         </div>
       </div>
-    </div>
   );
 }
