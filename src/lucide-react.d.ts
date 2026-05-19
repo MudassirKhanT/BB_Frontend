@@ -18,6 +18,13 @@ declare module "lucide-react" {
   export const SkipBack: FC<IconProps>;
   export const ExternalLink: FC<IconProps>;
   export const Link: FC<IconProps>;
+  export const Calculator: FC<IconProps>;
+  export const Layers: FC<IconProps>;
+  export const PlayCircle: FC<IconProps>;
+  export const ChevronRight: FC<IconProps>;
+  export const PlayCircle: FC<IconProps>;
+
+  export const ThumbsUp: FC<IconProps>;
 
   // ── Status & Feedback ─────────────────────────────────────────────────────────
   export const Check: FC<IconProps>;
@@ -143,4 +150,10 @@ declare module "lucide-react" {
   export const LayoutDashboard: FC<IconProps>;
   export const ArrowUpRight: FC<IconProps>;
   export const ArrowDownRight: FC<IconProps>;
+
+  export const Database: FC<IconProps>;
+  export const Undo2: FC<IconProps>;
+  export const Redo2: FC<IconProps>;
+  export const PenLine: FC<IconProps>;
+  export const ClipboardPaste: FC<IconProps>;
 }
