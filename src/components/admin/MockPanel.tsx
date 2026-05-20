@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Pencil, Trash2, X, Loader2, ClipboardList, Eye, EyeOff, ListChecks, ArrowLeft } from "lucide-react";
 import { mockApi } from "../../lib/api";
+import type { MockExam, MockQuestion, MockSection } from "@/types/models";
 
 const toSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -11,34 +12,56 @@ const BANNERS = [
   "from-amber-400 via-orange-500 to-red-500",
 ];
 
-const EXAM_BLANK = { title: "", slug: "", description: "", instructions: "", duration: 60, passingScore: 60, tags: "", banner: BANNERS[0], isPublished: false };
-const Q_BLANK = { section: "aptitude", question: "", options: ["", "", "", ""], correctAnswer: 0, explanation: "", difficulty: "Easy", order: 0 };
+interface ExamForm {
+  title: string;
+  slug: string;
+  description: string;
+  instructions: string;
+  duration: number;
+  passingScore: number;
+  tags: string;
+  banner: string;
+  isPublished: boolean;
+}
+
+interface QuestionForm {
+  section: MockSection;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation: string;
+  difficulty: "Easy" | "Medium" | "Hard";
+  order: number;
+}
+
+const EXAM_BLANK: ExamForm = { title: "", slug: "", description: "", instructions: "", duration: 60, passingScore: 60, tags: "", banner: BANNERS[0], isPublished: false };
+const Q_BLANK: QuestionForm = { section: "aptitude", question: "", options: ["", "", "", ""], correctAnswer: 0, explanation: "", difficulty: "Easy", order: 0 };
 
 export default function MockPanel() {
-  const [exams, setExams]         = useState<any[]>([]);
+  const [exams, setExams]         = useState<MockExam[]>([]);
   const [loading, setLoading]     = useState(true);
   const [showExamModal, setShowE] = useState(false);
-  const [editExam, setEditE]      = useState<any>(null);
-  const [examForm, setEF]         = useState<any>({ ...EXAM_BLANK });
+  const [editExam, setEditE]      = useState<MockExam | null>(null);
+  const [examForm, setEF]         = useState<ExamForm>({ ...EXAM_BLANK });
   const [savingE, setSavingE]     = useState(false);
   const [deleteId, setDeleteId]   = useState<string | null>(null);
   const [error, setError]         = useState("");
 
   // Question management state
-  const [activeExam, setActiveExam] = useState<any>(null);
-  const [questions, setQs]          = useState<any[]>([]);
+  const [activeExam, setActiveExam] = useState<MockExam | null>(null);
+  const [questions, setQs]          = useState<MockQuestion[]>([]);
   const [loadingQ, setLoadingQ]     = useState(false);
   const [showQModal, setShowQM]     = useState(false);
-  const [editQ, setEditQ]           = useState<any>(null);
-  const [qForm, setQF]              = useState<any>({ ...Q_BLANK, options: ["", "", "", ""] });
+  const [editQ, setEditQ]           = useState<MockQuestion | null>(null);
+  const [qForm, setQF]              = useState<QuestionForm>({ ...Q_BLANK, options: ["", "", "", ""] });
   const [savingQ, setSavingQ]       = useState(false);
   const [deleteQId, setDeleteQId]   = useState<string | null>(null);
   const [qError, setQError]         = useState("");
 
-  const loadExams = () => mockApi.getAll().then((d: any) => { setExams(Array.isArray(d) ? d : []); setLoading(false); });
+  const loadExams = () => mockApi.getAll().then((d: MockExam[]) => { setExams(Array.isArray(d) ? d : []); setLoading(false); });
   useEffect(() => { loadExams(); }, []);
 
-  const loadQuestions = async (exam: any) => {
+  const loadQuestions = async (exam: MockExam) => {
     setActiveExam(exam); setLoadingQ(true);
     const qs = await mockApi.getQuestionsAdmin(exam._id);
     setQs(Array.isArray(qs) ? qs : []); setLoadingQ(false);
@@ -46,7 +69,7 @@ export default function MockPanel() {
 
   // Exam CRUD
   const openCreateExam = () => { setEditE(null); setEF({ ...EXAM_BLANK }); setError(""); setShowE(true); };
-  const openEditExam = (item: any) => {
+  const openEditExam = (item: MockExam) => {
     setEditE(item);
     setEF({ title: item.title, slug: item.slug, description: item.description || "", instructions: item.instructions || "", duration: item.duration ?? 60, passingScore: item.passingScore ?? 60, tags: (item.tags || []).join(", "), banner: item.banner || BANNERS[0], isPublished: item.isPublished ?? false });
     setError(""); setShowE(true);
@@ -58,18 +81,18 @@ export default function MockPanel() {
       if (editExam) await mockApi.update(editExam._id, payload);
       else await mockApi.create(payload);
       setShowE(false); await loadExams();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : "An error occurred"); }
     finally { setSavingE(false); }
   };
   const handleDeleteExam = async () => {
     if (!deleteId) return;
     try { await mockApi.delete(deleteId); setDeleteId(null); if (activeExam?._id === deleteId) setActiveExam(null); await loadExams(); }
-    catch (err: any) { alert(err.message); }
+    catch (err: unknown) { alert(err instanceof Error ? err.message : "An error occurred"); }
   };
 
   // Question CRUD
   const openCreateQ = () => { setEditQ(null); setQF({ ...Q_BLANK, options: ["", "", "", ""] }); setQError(""); setShowQM(true); };
-  const openEditQ = (q: any) => {
+  const openEditQ = (q: MockQuestion) => {
     setEditQ(q);
     setQF({ section: q.section, question: q.question, options: [...q.options], correctAnswer: q.correctAnswer, explanation: q.explanation || "", difficulty: q.difficulty || "Easy", order: q.order ?? 0 });
     setQError(""); setShowQM(true);
@@ -78,16 +101,16 @@ export default function MockPanel() {
     e.preventDefault(); setSavingQ(true); setQError("");
     try {
       if (editQ) await mockApi.updateQuestion(editQ._id, qForm);
-      else await mockApi.addQuestion(activeExam._id, qForm);
-      setShowQM(false); await loadQuestions(activeExam);
+      else await mockApi.addQuestion(activeExam!._id, qForm);
+      setShowQM(false); await loadQuestions(activeExam!);
       await loadExams();
-    } catch (err: any) { setQError(err.message); }
+    } catch (err: unknown) { setQError(err instanceof Error ? err.message : "An error occurred"); }
     finally { setSavingQ(false); }
   };
   const handleDeleteQ = async () => {
     if (!deleteQId) return;
-    try { await mockApi.deleteQuestion(deleteQId); setDeleteQId(null); await loadQuestions(activeExam); await loadExams(); }
-    catch (err: any) { alert(err.message); }
+    try { await mockApi.deleteQuestion(deleteQId); setDeleteQId(null); await loadQuestions(activeExam!); await loadExams(); }
+    catch (err: unknown) { alert(err instanceof Error ? err.message : "An error occurred"); }
   };
 
   const F = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -160,32 +183,32 @@ export default function MockPanel() {
               <form onSubmit={submitQ} className="p-5 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <F label="Section">
-                    <select className={inp} value={qForm.section} onChange={e => setQF((f: any) => ({ ...f, section: e.target.value }))}>
+                    <select className={inp} value={qForm.section} onChange={e => setQF(f => ({ ...f, section: e.target.value as MockSection }))}>
                       {["aptitude","communication","coding","sql"].map(s => <option key={s}>{s}</option>)}
                     </select>
                   </F>
                   <F label="Difficulty">
-                    <select className={inp} value={qForm.difficulty} onChange={e => setQF((f: any) => ({ ...f, difficulty: e.target.value }))}>
+                    <select className={inp} value={qForm.difficulty} onChange={e => setQF(f => ({ ...f, difficulty: e.target.value as "Easy" | "Medium" | "Hard" }))}>
                       {["Easy","Medium","Hard"].map(d => <option key={d}>{d}</option>)}
                     </select>
                   </F>
                 </div>
                 <F label="Question *">
-                  <textarea className={inp} rows={3} value={qForm.question} required onChange={e => setQF((f: any) => ({ ...f, question: e.target.value }))} />
+                  <textarea className={inp} rows={3} value={qForm.question} required onChange={e => setQF(f => ({ ...f, question: e.target.value }))} />
                 </F>
                 {[0,1,2,3].map(i => (
                   <F key={i} label={`Option ${i+1} ${i === qForm.correctAnswer ? "✓ Correct" : ""}`}>
                     <input className={`${inp} ${i === qForm.correctAnswer ? "border-green-400 bg-green-50" : ""}`} value={qForm.options[i]} required
-                      onChange={e => { const opts = [...qForm.options]; opts[i] = e.target.value; setQF((f: any) => ({ ...f, options: opts })); }} />
+                      onChange={e => { const opts = [...qForm.options]; opts[i] = e.target.value; setQF(f => ({ ...f, options: opts })); }} />
                   </F>
                 ))}
                 <F label="Correct Answer">
-                  <select className={inp} value={qForm.correctAnswer} onChange={e => setQF((f: any) => ({ ...f, correctAnswer: Number(e.target.value) }))}>
+                  <select className={inp} value={qForm.correctAnswer} onChange={e => setQF(f => ({ ...f, correctAnswer: Number(e.target.value) }))}>
                     {[0,1,2,3].map(i => <option key={i} value={i}>Option {i+1}</option>)}
                   </select>
                 </F>
                 <F label="Explanation">
-                  <textarea className={inp} rows={2} value={qForm.explanation} onChange={e => setQF((f: any) => ({ ...f, explanation: e.target.value }))} />
+                  <textarea className={inp} rows={2} value={qForm.explanation} onChange={e => setQF(f => ({ ...f, explanation: e.target.value }))} />
                 </F>
                 {qError && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{qError}</p>}
                 <div className="flex gap-3 pt-1">
@@ -287,35 +310,35 @@ export default function MockPanel() {
               <div className="grid grid-cols-2 gap-4">
                 <F label="Title *">
                   <input className={inp} value={examForm.title} required
-                    onChange={e => setEF((f: any) => ({ ...f, title: e.target.value, slug: editExam ? f.slug : toSlug(e.target.value) }))} />
+                    onChange={e => setEF(f => ({ ...f, title: e.target.value, slug: editExam ? f.slug : toSlug(e.target.value) }))} />
                 </F>
                 <F label="Slug *">
-                  <input className={inp} value={examForm.slug} required onChange={e => setEF((f: any) => ({ ...f, slug: e.target.value }))} />
+                  <input className={inp} value={examForm.slug} required onChange={e => setEF(f => ({ ...f, slug: e.target.value }))} />
                 </F>
               </div>
               <F label="Description">
-                <textarea className={inp} rows={2} value={examForm.description} onChange={e => setEF((f: any) => ({ ...f, description: e.target.value }))} />
+                <textarea className={inp} rows={2} value={examForm.description} onChange={e => setEF(f => ({ ...f, description: e.target.value }))} />
               </F>
               <F label="Instructions">
-                <textarea className={inp} rows={3} value={examForm.instructions} onChange={e => setEF((f: any) => ({ ...f, instructions: e.target.value }))} />
+                <textarea className={inp} rows={3} value={examForm.instructions} onChange={e => setEF(f => ({ ...f, instructions: e.target.value }))} />
               </F>
               <div className="grid grid-cols-2 gap-4">
-                <F label="Duration (min)"><input type="number" className={inp} min={5} value={examForm.duration} onChange={e => setEF((f: any) => ({ ...f, duration: Number(e.target.value) }))} /></F>
-                <F label="Passing Score (%)"><input type="number" className={inp} min={0} max={100} value={examForm.passingScore} onChange={e => setEF((f: any) => ({ ...f, passingScore: Number(e.target.value) }))} /></F>
+                <F label="Duration (min)"><input type="number" className={inp} min={5} value={examForm.duration} onChange={e => setEF(f => ({ ...f, duration: Number(e.target.value) }))} /></F>
+                <F label="Passing Score (%)"><input type="number" className={inp} min={0} max={100} value={examForm.passingScore} onChange={e => setEF(f => ({ ...f, passingScore: Number(e.target.value) }))} /></F>
               </div>
               <F label="Tags (comma-separated)">
-                <input className={inp} value={examForm.tags} placeholder="DSA, Aptitude, SQL" onChange={e => setEF((f: any) => ({ ...f, tags: e.target.value }))} />
+                <input className={inp} value={examForm.tags} placeholder="DSA, Aptitude, SQL" onChange={e => setEF(f => ({ ...f, tags: e.target.value }))} />
               </F>
               <F label="Banner">
                 <div className="flex flex-wrap gap-2 mt-1">
                   {BANNERS.map(b => (
-                    <button key={b} type="button" onClick={() => setEF((f: any) => ({ ...f, banner: b }))}
+                    <button key={b} type="button" onClick={() => setEF(f => ({ ...f, banner: b }))}
                       className={`h-8 w-20 rounded-lg bg-gradient-to-r ${b} ${examForm.banner === b ? "ring-2 ring-offset-2 ring-slate-900" : ""}`} />
                   ))}
                 </div>
               </F>
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="mpub" checked={examForm.isPublished} onChange={e => setEF((f: any) => ({ ...f, isPublished: e.target.checked }))} className="rounded" />
+                <input type="checkbox" id="mpub" checked={examForm.isPublished} onChange={e => setEF(f => ({ ...f, isPublished: e.target.checked }))} className="rounded" />
                 <label htmlFor="mpub" className="text-sm font-semibold text-slate-700">Published</label>
               </div>
               {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}

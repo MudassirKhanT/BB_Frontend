@@ -4,6 +4,7 @@ import {
   ArrowLeft, ChevronRight, Eye, EyeOff, BookOpen,
 } from "lucide-react";
 import { companyApi } from "../../lib/api";
+import { Company, PrepContent, PrepQuestion, getErrorMessage } from "@/types/models";
 
 const toSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -22,32 +23,67 @@ const F = ({ label, children }: { label: string; children: React.ReactNode }) =>
   <div><label className="block text-xs font-bold text-slate-600 mb-1.5">{label}</label>{children}</div>
 );
 
-const BLANK_CONTENT = { category: "dsa" as Category, title: "", content: "", order: 0, isPublished: true };
-const BLANK_Q = {
+interface PrepContentForm {
+  category: Category;
+  title: string;
+  content: string;
+  order: number;
+  isPublished: boolean;
+}
+
+interface PrepQuestionForm {
+  category: Category;
+  type: "mcq" | "coding" | "theory";
+  question: string;
+  options: string[];
+  answer: string;
+  solution: string;
+  solutionCode: string;
+  solutionLanguage: string;
+  difficulty: "Easy" | "Medium" | "Hard";
+  order: number;
+  isPublished: boolean;
+}
+
+interface CompanyForm {
+  name: string;
+  slug: string;
+  type: string;
+  description: string;
+  overview: string;
+  website: string;
+  logo: string;
+  color: string;
+  hiringDetails: { ctc: string; selectionRate: number; eligibility: string };
+  isPublished: boolean;
+}
+
+const BLANK_CONTENT: PrepContentForm = { category: "dsa" as Category, title: "", content: "", order: 0, isPublished: true };
+const BLANK_Q: PrepQuestionForm = {
   category: "dsa" as Category, type: "theory", question: "", options: ["","","",""],
   answer: "", solution: "", solutionCode: "", solutionLanguage: "",
   difficulty: "Easy", order: 0, isPublished: true,
 };
 
-function PrepContentView({ company, onBack }: { company: any; onBack: () => void }) {
+function PrepContentView({ company, onBack }: { company: Company; onBack: () => void }) {
   const [activeTab, setActiveTab] = useState<Category>("dsa");
-  const [contents, setContents] = useState<any[]>([]);
-  const [questions, setQuestions] = useState<any[]>([]);
+  const [contents, setContents] = useState<PrepContent[]>([]);
+  const [questions, setQuestions] = useState<PrepQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCModal, setShowCModal] = useState(false);
-  const [editC, setEditC] = useState<any>(null);
-  const [formC, setFormC] = useState<any>({ ...BLANK_CONTENT });
+  const [editC, setEditC] = useState<PrepContent | null>(null);
+  const [formC, setFormC] = useState<PrepContentForm>({ ...BLANK_CONTENT });
   const [savingC, setSavingC] = useState(false);
   const [showQModal, setShowQModal] = useState(false);
-  const [editQ, setEditQ] = useState<any>(null);
-  const [formQ, setFormQ] = useState<any>({ ...BLANK_Q, options: ["","","",""] });
+  const [editQ, setEditQ] = useState<PrepQuestion | null>(null);
+  const [formQ, setFormQ] = useState<PrepQuestionForm>({ ...BLANK_Q, options: ["","","",""] });
   const [savingQ, setSavingQ] = useState(false);
   const [deleteInfo, setDeleteInfo] = useState<{ id: string; kind: "content"|"question" } | null>(null);
   const [error, setError] = useState("");
 
   const load = useCallback(() => {
     setLoading(true);
-    companyApi.getPrepContent(company.slug).then((d: any) => {
+    companyApi.getPrepContent(company.slug).then((d: { prepContent: PrepContent[]; questions: PrepQuestion[] }) => {
       setContents(Array.isArray(d.prepContent) ? d.prepContent : []);
       setQuestions(Array.isArray(d.questions) ? d.questions : []);
       setLoading(false);
@@ -60,7 +96,7 @@ function PrepContentView({ company, onBack }: { company: any; onBack: () => void
   const tabQuestions = questions.filter(q => q.category === activeTab);
 
   const openCreateContent = () => { setEditC(null); setFormC({ ...BLANK_CONTENT, category: activeTab }); setError(""); setShowCModal(true); };
-  const openEditContent   = (item: any) => { setEditC(item); setFormC({ category: item.category, title: item.title, content: item.content||"", order: item.order??0, isPublished: item.isPublished??true }); setError(""); setShowCModal(true); };
+  const openEditContent   = (item: PrepContent) => { setEditC(item); setFormC({ category: item.category, title: item.title, content: item.content||"", order: item.order??0, isPublished: item.isPublished??true }); setError(""); setShowCModal(true); };
 
   const handleSubmitContent = async (e: React.FormEvent) => {
     e.preventDefault(); setSavingC(true); setError("");
@@ -68,12 +104,12 @@ function PrepContentView({ company, onBack }: { company: any; onBack: () => void
       if (editC) await companyApi.updatePrepContent(editC._id, formC);
       else await companyApi.createPrepContent(company._id, formC);
       setShowCModal(false); load();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(getErrorMessage(err)); }
     finally { setSavingC(false); }
   };
 
   const openCreateQ = () => { setEditQ(null); setFormQ({ ...BLANK_Q, category: activeTab, options: ["","","",""] }); setError(""); setShowQModal(true); };
-  const openEditQ   = (item: any) => {
+  const openEditQ   = (item: PrepQuestion) => {
     setEditQ(item);
     setFormQ({ category: item.category, type: item.type||"theory", question: item.question||"",
       options: item.options?.length===4 ? item.options : ["","","",""],
@@ -90,7 +126,7 @@ function PrepContentView({ company, onBack }: { company: any; onBack: () => void
       if (editQ) await companyApi.updateQuestion(editQ._id, payload);
       else await companyApi.createQuestion(company._id, payload);
       setShowQModal(false); load();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(getErrorMessage(err)); }
     finally { setSavingQ(false); }
   };
 
@@ -100,7 +136,7 @@ function PrepContentView({ company, onBack }: { company: any; onBack: () => void
       if (deleteInfo.kind==="content") await companyApi.deletePrepContent(deleteInfo.id);
       else await companyApi.deleteQuestion(deleteInfo.id);
       setDeleteInfo(null); load();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: unknown) { alert(getErrorMessage(err)); }
   };
 
   return (
@@ -206,20 +242,20 @@ function PrepContentView({ company, onBack }: { company: any; onBack: () => void
             <form onSubmit={handleSubmitContent} className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <F label="Category">
-                  <select className={inp} value={formC.category} onChange={e => setFormC((f: any) => ({ ...f, category: e.target.value }))}>
+                  <select className={inp} value={formC.category} onChange={e => setFormC(f => ({ ...f, category: e.target.value as Category }))}>
                     {CATEGORIES.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
                   </select>
                 </F>
-                <F label="Order"><input type="number" className={inp} value={formC.order} onChange={e => setFormC((f: any) => ({ ...f, order: Number(e.target.value) }))} /></F>
+                <F label="Order"><input type="number" className={inp} value={formC.order} onChange={e => setFormC(f => ({ ...f, order: Number(e.target.value) }))} /></F>
               </div>
-              <F label="Title *"><input className={inp} value={formC.title} required onChange={e => setFormC((f: any) => ({ ...f, title: e.target.value }))} /></F>
+              <F label="Title *"><input className={inp} value={formC.title} required onChange={e => setFormC(f => ({ ...f, title: e.target.value }))} /></F>
               <F label="Content (Markdown)">
                 <textarea className={inp + " font-mono text-xs"} rows={10}
                   placeholder="## Overview&#10;&#10;Preparation notes here…&#10;&#10;### Key Concepts&#10;- Point 1"
-                  value={formC.content} onChange={e => setFormC((f: any) => ({ ...f, content: e.target.value }))} />
+                  value={formC.content} onChange={e => setFormC(f => ({ ...f, content: e.target.value }))} />
               </F>
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="cpub" checked={formC.isPublished} onChange={e => setFormC((f: any) => ({ ...f, isPublished: e.target.checked }))} />
+                <input type="checkbox" id="cpub" checked={formC.isPublished} onChange={e => setFormC(f => ({ ...f, isPublished: e.target.checked }))} />
                 <label htmlFor="cpub" className="text-sm font-semibold text-slate-700">Published</label>
               </div>
               {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
@@ -245,19 +281,19 @@ function PrepContentView({ company, onBack }: { company: any; onBack: () => void
             <form onSubmit={handleSubmitQ} className="p-5 space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <F label="Category">
-                  <select className={inp} value={formQ.category} onChange={e => setFormQ((f: any) => ({ ...f, category: e.target.value }))}>
+                  <select className={inp} value={formQ.category} onChange={e => setFormQ(f => ({ ...f, category: e.target.value as Category }))}>
                     {CATEGORIES.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
                   </select>
                 </F>
                 <F label="Type">
-                  <select className={inp} value={formQ.type} onChange={e => setFormQ((f: any) => ({ ...f, type: e.target.value }))}>
+                  <select className={inp} value={formQ.type} onChange={e => setFormQ(f => ({ ...f, type: e.target.value as PrepQuestionForm["type"] }))}>
                     <option value="theory">Theory</option>
                     <option value="mcq">MCQ</option>
                     <option value="coding">Coding</option>
                   </select>
                 </F>
                 <F label="Difficulty">
-                  <select className={inp} value={formQ.difficulty} onChange={e => setFormQ((f: any) => ({ ...f, difficulty: e.target.value }))}>
+                  <select className={inp} value={formQ.difficulty} onChange={e => setFormQ(f => ({ ...f, difficulty: e.target.value as PrepQuestionForm["difficulty"] }))}>
                     {["Easy","Medium","Hard"].map(d => <option key={d}>{d}</option>)}
                   </select>
                 </F>
@@ -265,42 +301,42 @@ function PrepContentView({ company, onBack }: { company: any; onBack: () => void
               <F label="Question *">
                 <textarea className={inp} rows={3} required value={formQ.question}
                   placeholder="Explain the difference between…"
-                  onChange={e => setFormQ((f: any) => ({ ...f, question: e.target.value }))} />
+                  onChange={e => setFormQ(f => ({ ...f, question: e.target.value }))} />
               </F>
               {formQ.type === "mcq" && (
                 <div className="space-y-2">
                   <p className="text-xs font-bold text-slate-600">Options (4 choices)</p>
-                  {(formQ.options as string[]).map((opt, i) => (
+                  {formQ.options.map((opt, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <span className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600 flex-shrink-0">
                         {String.fromCharCode(65+i)}
                       </span>
-                      <input value={opt} onChange={e => setFormQ((f: any) => ({ ...f, options: f.options.map((o: string, j: number) => j===i ? e.target.value : o) }))}
+                      <input value={opt} onChange={e => setFormQ(f => ({ ...f, options: f.options.map((o, j) => j===i ? e.target.value : o) }))}
                         placeholder={`Option ${String.fromCharCode(65+i)}`} className={inp} />
                     </div>
                   ))}
                   <F label="Correct Answer (A, B, C or D)">
                     <input className={inp} value={formQ.answer} placeholder="A"
-                      onChange={e => setFormQ((f: any) => ({ ...f, answer: e.target.value }))} />
+                      onChange={e => setFormQ(f => ({ ...f, answer: e.target.value }))} />
                   </F>
                 </div>
               )}
               {formQ.type !== "mcq" && (
                 <F label="Answer / Key Points">
                   <input className={inp} value={formQ.answer} placeholder="Short answer or key points…"
-                    onChange={e => setFormQ((f: any) => ({ ...f, answer: e.target.value }))} />
+                    onChange={e => setFormQ(f => ({ ...f, answer: e.target.value }))} />
                 </F>
               )}
               <F label="Full Solution / Explanation (Markdown)">
                 <textarea className={inp + " font-mono text-xs"} rows={6} value={formQ.solution}
                   placeholder="## Solution&#10;&#10;Detailed explanation…"
-                  onChange={e => setFormQ((f: any) => ({ ...f, solution: e.target.value }))} />
+                  onChange={e => setFormQ(f => ({ ...f, solution: e.target.value }))} />
               </F>
               {formQ.type === "coding" && (
                 <>
                   <F label="Solution Language">
                     <select className={inp} value={formQ.solutionLanguage}
-                      onChange={e => setFormQ((f: any) => ({ ...f, solutionLanguage: e.target.value }))}>
+                      onChange={e => setFormQ(f => ({ ...f, solutionLanguage: e.target.value }))}>
                       <option value="">Select language</option>
                       {["python","javascript","java","cpp","c"].map(l => <option key={l} value={l}>{l}</option>)}
                     </select>
@@ -308,12 +344,12 @@ function PrepContentView({ company, onBack }: { company: any; onBack: () => void
                   <F label="Solution Code">
                     <textarea className={inp + " font-mono text-xs"} rows={8} value={formQ.solutionCode}
                       placeholder="def solution():&#10;    pass"
-                      onChange={e => setFormQ((f: any) => ({ ...f, solutionCode: e.target.value }))} />
+                      onChange={e => setFormQ(f => ({ ...f, solutionCode: e.target.value }))} />
                   </F>
                 </>
               )}
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="qpub" checked={formQ.isPublished} onChange={e => setFormQ((f: any) => ({ ...f, isPublished: e.target.checked }))} />
+                <input type="checkbox" id="qpub" checked={formQ.isPublished} onChange={e => setFormQ(f => ({ ...f, isPublished: e.target.checked }))} />
                 <label htmlFor="qpub" className="text-sm font-semibold text-slate-700">Published</label>
               </div>
               {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
@@ -346,11 +382,11 @@ function PrepContentView({ company, onBack }: { company: any; onBack: () => void
 
 // ── Main CompanyPanel ──────────────────────────────────────────────────────────
 export default function CompanyPanel() {
-  const [items, setItems]       = useState<any[]>([]);
+  const [items, setItems]       = useState<Company[]>([]);
   const [loading, setLoading]   = useState(true);
   const [showModal, setShow]    = useState(false);
-  const [editItem, setEdit]     = useState<any>(null);
-  const [form, setForm]         = useState<any>({
+  const [editItem, setEdit]     = useState<Company | null>(null);
+  const [form, setForm]         = useState<CompanyForm>({
     name: "", slug: "", type: "Product", description: "", overview: "",
     website: "", logo: "", color: COLORS[0],
     hiringDetails: { ctc: "", selectionRate: 0, eligibility: "" },
@@ -359,25 +395,25 @@ export default function CompanyPanel() {
   const [saving, setSaving]     = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [error, setError]       = useState("");
-  const [activeCompany, setActiveCompany] = useState<any | null>(null);
+  const [activeCompany, setActiveCompany] = useState<Company | null>(null);
 
-  const load = () => companyApi.getAll().then((d: any) => { setItems(Array.isArray(d) ? d : []); setLoading(false); });
+  const load = () => companyApi.getAll().then((d: Company[]) => { setItems(Array.isArray(d) ? d : []); setLoading(false); });
   useEffect(() => { load(); }, []);
 
-  const blankForm = () => ({
+  const blankForm = (): CompanyForm => ({
     name: "", slug: "", type: "Product", description: "", overview: "",
     website: "", logo: "", color: COLORS[0],
     hiringDetails: { ctc: "", selectionRate: 0, eligibility: "" }, isPublished: false,
   });
 
   const openCreate = () => { setEdit(null); setForm(blankForm()); setError(""); setShow(true); };
-  const openEdit = (item: any) => {
+  const openEdit = (item: Company) => {
     setEdit(item);
     setForm({
       name: item.name, slug: item.slug, type: item.type||"Product",
       description: item.description||"", overview: item.overview||"",
       website: item.website||"", logo: item.logo||"", color: item.color||COLORS[0],
-      hiringDetails: { ctc: item.hiringDetails?.ctc||"", selectionRate: item.hiringDetails?.selectionRate||0, eligibility: item.hiringDetails?.eligibility||"" },
+      hiringDetails: { ctc: item.hiringDetails?.ctc||"", selectionRate: Number(item.hiringDetails?.selectionRate) || 0, eligibility: item.hiringDetails?.eligibility||"" },
       isPublished: item.isPublished??false,
     });
     setError(""); setShow(true);
@@ -389,14 +425,14 @@ export default function CompanyPanel() {
       if (editItem) await companyApi.update(editItem._id, form);
       else await companyApi.create(form);
       setShow(false); await load();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(getErrorMessage(err)); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     try { await companyApi.delete(deleteId); setDeleteId(null); await load(); }
-    catch (err: any) { alert(err.message); }
+    catch (err: unknown) { alert(getErrorMessage(err)); }
   };
 
   if (activeCompany) return <PrepContentView company={activeCompany} onBack={() => setActiveCompany(null)} />;
@@ -470,42 +506,42 @@ export default function CompanyPanel() {
               <div className="grid grid-cols-2 gap-4">
                 <F label="Company Name *">
                   <input className={inp} value={form.name} required
-                    onChange={e => setForm((f: any) => ({ ...f, name: e.target.value, slug: editItem ? f.slug : toSlug(e.target.value) }))} />
+                    onChange={e => setForm(f => ({ ...f, name: e.target.value, slug: editItem ? f.slug : toSlug(e.target.value) }))} />
                 </F>
                 <F label="Slug *">
-                  <input className={inp} value={form.slug} required onChange={e => setForm((f: any) => ({ ...f, slug: e.target.value }))} />
+                  <input className={inp} value={form.slug} required onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} />
                 </F>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <F label="Type">
-                  <select className={inp} value={form.type} onChange={e => setForm((f: any) => ({ ...f, type: e.target.value }))}>
+                  <select className={inp} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
                     {["Service","Product","Startup","Consulting","FAANG"].map(t => <option key={t}>{t}</option>)}
                   </select>
                 </F>
-                <F label="Website"><input className={inp} value={form.website} placeholder="https://company.com" onChange={e => setForm((f: any) => ({ ...f, website: e.target.value }))} /></F>
+                <F label="Website"><input className={inp} value={form.website} placeholder="https://company.com" onChange={e => setForm(f => ({ ...f, website: e.target.value }))} /></F>
               </div>
-              <F label="Description *"><textarea className={inp} rows={2} required value={form.description} onChange={e => setForm((f: any) => ({ ...f, description: e.target.value }))} /></F>
+              <F label="Description *"><textarea className={inp} rows={2} required value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></F>
               <F label="Overview (Markdown)">
                 <textarea className={inp + " font-mono text-xs"} rows={4} value={form.overview}
                   placeholder="## About&#10;Overview text here…"
-                  onChange={e => setForm((f: any) => ({ ...f, overview: e.target.value }))} />
+                  onChange={e => setForm(f => ({ ...f, overview: e.target.value }))} />
               </F>
-              <F label="Logo URL"><input className={inp} value={form.logo} onChange={e => setForm((f: any) => ({ ...f, logo: e.target.value }))} /></F>
+              <F label="Logo URL"><input className={inp} value={form.logo} onChange={e => setForm(f => ({ ...f, logo: e.target.value }))} /></F>
               <div className="grid grid-cols-3 gap-4">
-                <F label="CTC Range"><input className={inp} value={form.hiringDetails.ctc} placeholder="₹12-24 LPA" onChange={e => setForm((f: any) => ({ ...f, hiringDetails: { ...f.hiringDetails, ctc: e.target.value } }))} /></F>
-                <F label="Selection Rate (%)"><input type="number" min={0} max={100} className={inp} value={form.hiringDetails.selectionRate} onChange={e => setForm((f: any) => ({ ...f, hiringDetails: { ...f.hiringDetails, selectionRate: Number(e.target.value) } }))} /></F>
-                <F label="Eligibility"><input className={inp} value={form.hiringDetails.eligibility} placeholder="6.5+ CGPA" onChange={e => setForm((f: any) => ({ ...f, hiringDetails: { ...f.hiringDetails, eligibility: e.target.value } }))} /></F>
+                <F label="CTC Range"><input className={inp} value={form.hiringDetails.ctc} placeholder="₹12-24 LPA" onChange={e => setForm(f => ({ ...f, hiringDetails: { ...f.hiringDetails, ctc: e.target.value } }))} /></F>
+                <F label="Selection Rate (%)"><input type="number" min={0} max={100} className={inp} value={form.hiringDetails.selectionRate} onChange={e => setForm(f => ({ ...f, hiringDetails: { ...f.hiringDetails, selectionRate: Number(e.target.value) } }))} /></F>
+                <F label="Eligibility"><input className={inp} value={form.hiringDetails.eligibility} placeholder="6.5+ CGPA" onChange={e => setForm(f => ({ ...f, hiringDetails: { ...f.hiringDetails, eligibility: e.target.value } }))} /></F>
               </div>
               <F label="Card Color">
                 <div className="flex flex-wrap gap-2 mt-1">
                   {COLORS.map(c => (
-                    <button key={c} type="button" onClick={() => setForm((f: any) => ({ ...f, color: c }))}
+                    <button key={c} type="button" onClick={() => setForm(f => ({ ...f, color: c }))}
                       className={`w-8 h-8 rounded-lg bg-gradient-to-br ${c} ${form.color===c?"ring-2 ring-offset-2 ring-slate-900":""}`} />
                   ))}
                 </div>
               </F>
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="compub" checked={form.isPublished} onChange={e => setForm((f: any) => ({ ...f, isPublished: e.target.checked }))} />
+                <input type="checkbox" id="compub" checked={form.isPublished} onChange={e => setForm(f => ({ ...f, isPublished: e.target.checked }))} />
                 <label htmlFor="compub" className="text-sm font-semibold text-slate-700">Published</label>
               </div>
               {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}

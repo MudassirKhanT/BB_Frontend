@@ -186,7 +186,7 @@ export default function CompanyDetailPage() {
 
                 {/* Round tabs */}
                 <div className="flex gap-2 flex-wrap mb-6">
-                  {sortedRounds.map((round, idx) => (
+                  {sortedRounds.map((_round, idx) => (
                     <button key={idx} onClick={() => setActiveRound(idx)} className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-all ${activeRound === idx ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "bg-white text-slate-600 border-slate-200 hover:border-primary/40"}`}>
                       Round {idx + 1}
                     </button>

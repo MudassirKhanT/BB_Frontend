@@ -1,19 +1,20 @@
 import { useState, useEffect } from "react";
 import { CheckCircle2, Trash2, Loader2, Users, ExternalLink, RefreshCw } from "lucide-react";
 import { interviewExpApi } from "../../lib/api";
+import type { InterviewExperience } from "@/types/models";
 
 export default function InterviewExpPanel() {
-  const [pending, setPending]   = useState<any[]>([]);
+  const [pending, setPending]   = useState<InterviewExperience[]>([]);
   const [loading, setLoading]   = useState(true);
   const [acting, setActing]     = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [tab, setTab]           = useState<"pending" | "all">("pending");
-  const [all, setAll]           = useState<any[]>([]);
+  const [all, setAll]           = useState<InterviewExperience[]>([]);
   const [loadingAll, setLoadingAll] = useState(false);
 
   const loadPending = () => {
     setLoading(true);
-    interviewExpApi.getPending().then((d: any) => {
+    interviewExpApi.getPending().then((d) => {
       setPending(Array.isArray(d) ? d : []);
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -21,7 +22,7 @@ export default function InterviewExpPanel() {
 
   const loadAll = () => {
     setLoadingAll(true);
-    interviewExpApi.getAll().then((d: any) => {
+    interviewExpApi.getAll().then((d) => {
       setAll(Array.isArray(d) ? d : d.experiences ?? []);
       setLoadingAll(false);
     }).catch(() => setLoadingAll(false));
@@ -33,7 +34,7 @@ export default function InterviewExpPanel() {
   const approve = async (id: string) => {
     setActing(id);
     try { await interviewExpApi.approve(id); loadPending(); if (tab === "all") loadAll(); }
-    catch (err: any) { alert(err.message); }
+    catch (err: unknown) { alert(err instanceof Error ? err.message : "An error occurred"); }
     finally { setActing(null); }
   };
 
@@ -42,7 +43,7 @@ export default function InterviewExpPanel() {
     try {
       await interviewExpApi.delete(deleteId);
       setDeleteId(null); loadPending(); if (tab === "all") loadAll();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: unknown) { alert(err instanceof Error ? err.message : "An error occurred"); }
   };
 
   const RESULT_COLOR: Record<string, string> = {
@@ -51,7 +52,7 @@ export default function InterviewExpPanel() {
     pending: "bg-yellow-100 text-yellow-700",
   };
 
-  const Card = ({ item, showApprove }: { item: any; showApprove: boolean }) => (
+  const Card = ({ item, showApprove }: { item: InterviewExperience; showApprove: boolean }) => (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
@@ -63,7 +64,7 @@ export default function InterviewExpPanel() {
             {item.isApproved && <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-100 text-emerald-700">Approved</span>}
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            {item.company?.name || "Unknown company"} · {item.year}
+            {(typeof item.company === "object" ? item.company.name : item.company) || "Unknown company"} · {item.year}
           </p>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">

@@ -61,8 +61,8 @@ function SubmitForm({ companies, onClose, onSubmit }: {
       await interviewExpApi.submit(companySlug, form);
       setSuccess(true);
       setTimeout(() => { onSubmit(); onClose(); }, 2000);
-    } catch (err: any) {
-      setError(err.message || "Submission failed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Submission failed");
     }
     setSaving(false);
   };
@@ -242,15 +242,16 @@ export default function InterviewExperiencesPage() {
 
   const load = (pg = 1) => {
     setLoading(true);
-    const params: any = { page: pg, limit: 15 };
+    const params: { page: number; limit: number; result?: string } = { page: pg, limit: 15 };
     if (filterResult !== "all") params.result = filterResult;
     interviewExpApi.getAll(params)
-      .then((data: any) => {
-        setExperiences(data.experiences || []);
-        setTotalPages(data.pages || 1);
+      .then((data) => {
+        const d = data as { experiences: Experience[]; pages: number };
+        setExperiences(d.experiences || []);
+        setTotalPages(d.pages || 1);
         setPage(pg);
       })
-      .catch((err: any) => setError(err.message || "Failed to load"))
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Failed to load"))
       .finally(() => setLoading(false));
   };
 
@@ -269,8 +270,8 @@ export default function InterviewExperiencesPage() {
     try {
       await interviewExpApi.delete(id);
       setExperiences((prev) => prev.filter((e) => e._id !== id));
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "An error occurred");
     }
   };
 

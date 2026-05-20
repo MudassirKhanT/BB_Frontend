@@ -170,13 +170,13 @@ export default function ProfilePage() {
         resumeUrl: form.resumeUrl.trim(),
         skills: form.skills,
       };
-      const res: any = await userApi.updateProfile(payload);
+      const res = await userApi.updateProfile(payload);
       setUser((prev) => prev ? { ...prev, ...payload, skills: form.skills } : prev);
       localStorage.setItem("user", JSON.stringify({ ...JSON.parse(localStorage.getItem("user") || "{}"), username: payload.username }));
       setEditing(false);
-      showToast(res.message || "Profile updated!");
-    } catch (err: any) {
-      showToast(err.message || "Failed to save", false);
+      showToast((res as { message?: string }).message || "Profile updated!");
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : "Failed to save", false);
     } finally {
       setSaving(false);
     }

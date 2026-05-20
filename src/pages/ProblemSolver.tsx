@@ -3,10 +3,9 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Play, CheckCircle2, Circle, ChevronDown, ChevronUp, ExternalLink,
   RotateCcw, Copy, Check, Loader2, Terminal, BookOpen, FlaskConical,
-  ChevronRight, Code2, Trophy, ChevronLeft, Undo2, Redo2, Lock,
+  Code2, Trophy, Undo2, Redo2, Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { problemApi, compileApi } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -16,7 +15,7 @@ interface Problem {
   _id: string; title: string; slug: string;
   difficulty: "Easy" | "Medium" | "Hard"; frequency: number;
   description: string; examples: Example[]; testCases: TestCase[];
-  starterCode: { python: string; javascript: string; cpp: string; java: string };
+  starterCode: { python: string; javascript: string; cpp: string; java: string; sql?: string };
   topicTag: string; leetcodeUrl: string; companies?: string[];
   solutionArticle?: string; hiddenTestCaseCount?: number; totalTestCaseCount?: number;
   userStatus: "solved" | "attempted" | null;
@@ -312,7 +311,7 @@ export default function ProblemSolver() {
   };
 
   // Autocomplete
-  const [suggestions, setSuggestions]               = useState<Array<{ label: string; snippet: string }>>([]);
+  const [suggestions, setSuggestions]               = useState<Array<{ trigger?: string; label: string; snippet: string }>>([]);
   const [suggestionPrefix, setSuggestionPrefix]     = useState("");
   const [activeSuggestionIdx, setActiveSuggestionIdx] = useState(0);
   const [showSuggestions, setShowSuggestions]       = useState(false);
@@ -324,7 +323,7 @@ export default function ProblemSolver() {
     if (!token) { navigate("/login"); return; }
     if (!slug) return;
     setLoading(true);
-    problemApi.getBySlug(slug).then((data: any) => {
+    problemApi.getBySlug(slug).then((data) => {
       setProblem(data);
       setStatus(data.userStatus);
 
@@ -349,8 +348,8 @@ export default function ProblemSolver() {
       });
       // Auto-select SQL tab for SQL-type problems
       if (data.type === "sql") setLanguage("sql");
-    }).catch((err: any) => {
-      setLoadError(err?.message || "Problem not found");
+    }).catch((err: unknown) => {
+      setLoadError(err instanceof Error ? err.message : "Problem not found");
     }).finally(() => setLoading(false));
   }, [slug, navigate]);
 
@@ -485,9 +484,9 @@ export default function ProblemSolver() {
     setSubmissionResult(null);
     try {
       const result = await compileApi.run({ language, code: getFullCode(), stdin: useCustomInput ? customInput : "" });
-      setOutput(result as any);
-    } catch (err: any) {
-      setOutput({ stdout: "", stderr: err.message || "Failed to run code.", exitCode: 1 });
+      setOutput(result);
+    } catch (err: unknown) {
+      setOutput({ stdout: "", stderr: err instanceof Error ? err.message : "Failed to run code.", exitCode: 1 });
     } finally {
       setRunning(false);
     }
@@ -505,13 +504,13 @@ export default function ProblemSolver() {
       setSubmissionResult(result);
       if (result.status === "accepted") setStatus("solved");
       else setStatus((prev) => (prev === "solved" ? prev : "attempted"));
-    } catch (err: any) {
+    } catch (err: unknown) {
       setSubmissionResult({
         status: "error",
         passedCount: 0,
         totalCount: 0,
         testResults: [],
-        message: err.message || "Submission failed.",
+        message: err instanceof Error ? err.message : "Submission failed.",
       });
     } finally {
       setSubmitting(false);
@@ -630,7 +629,7 @@ export default function ProblemSolver() {
               { id: "solution",    icon: Code2,        label: "Solution" },
               { id: "testcases",   icon: FlaskConical, label: `Tests (${problem.testCases.filter((t) => !t.isHidden).length})` },
             ].map(({ id, icon: Icon, label }) => (
-              <button key={id} onClick={() => setActiveTab(id as any)}
+              <button key={id} onClick={() => setActiveTab(id as "description" | "solution" | "testcases")}
                 className={`flex items-center gap-1.5 px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === id ? "border-blue-500 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
                 <Icon className="w-3.5 h-3.5" />{label}
               </button>
@@ -835,7 +834,7 @@ export default function ProblemSolver() {
                   { id: "results", icon: CheckCircle2,  label: "Results" },
                   { id: "input",   icon: Code2,         label: "Custom Input" },
                 ].map(({ id, icon: Icon, label }) => (
-                  <button key={id} onClick={() => { setOutputTab(id as any); setOutputHeight((h) => h < 200 ? 260 : h); }}
+                  <button key={id} onClick={() => { setOutputTab(id as "output" | "input" | "results"); setOutputHeight((h) => h < 200 ? 260 : h); }}
                     className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition-colors ${outputTab === id ? "border-blue-500 text-blue-400" : "border-transparent text-slate-500 hover:text-slate-300"}`}>
                     <Icon className="w-3 h-3" />{label}
                     {id === "output" && hasOutput && <span className={`w-1.5 h-1.5 rounded-full ml-1 ${isError ? "bg-red-500" : "bg-green-500"}`} />}

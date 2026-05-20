@@ -45,7 +45,7 @@ async function extractTextFromPDF(file: File): Promise<string> {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    const pageText = (content.items as any[])
+    const pageText = (content.items as Array<{ str: string }>)
       .filter((item) => typeof item.str === "string")
       .map((item) => item.str)
       .join(" ");
@@ -133,7 +133,7 @@ export default function ResumeAnalyzerPage() {
         } else {
           setExtractedText(text);
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         setError("Could not read this PDF. Please paste your resume text instead.");
         setFile(null);
       } finally {
@@ -164,8 +164,8 @@ export default function ResumeAnalyzerPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Analysis failed");
       setResult(data);
-    } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }

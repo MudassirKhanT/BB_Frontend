@@ -267,7 +267,7 @@ export default function ResourceDetailPage() {
     setLoading(true);
     resourceApi.getBySlug(slug)
       .then((data: Resource) => setResource(data))
-      .catch((err: any) => setError(err.message || "Not found"))
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Not found"))
       .finally(() => setLoading(false));
   }, [slug]);
 
@@ -295,8 +295,8 @@ export default function ResourceDetailPage() {
     try {
       await resourceApi.delete(resource._id);
       navigate(`/resources/${typeSlug}`);
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "An error occurred");
     }
   };
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Zap, BookOpen, Code2, MessageSquare, Layers, Globe,
@@ -31,6 +31,7 @@ interface PrepQuestion {
   difficulty: "Easy" | "Medium" | "Hard";
   tags: string[];
   order: number;
+  isPublished?: boolean;
 }
 
 interface PrepData {
@@ -398,8 +399,8 @@ function AdminQuestionForm({
         saved = await companyApi.createQuestion(companyId, payload);
       }
       onSaved(saved);
-    } catch (err: any) {
-      setError(err.message || "Failed to save question.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to save question.");
     } finally {
       setSaving(false);
     }
@@ -628,8 +629,8 @@ function SubmitExperienceForm({ slug, onSubmitted }: { slug: string; onSubmitted
     try {
       await interviewExpApi.submit(slug, { ...form, rounds: form.rounds.split(",").map(r => r.trim()).filter(Boolean) });
       setSubmitted(true); onSubmitted();
-    } catch (err: any) {
-      setError(err.message || "Failed to submit. Please try again.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to submit. Please try again.");
     } finally { setSubmitting(false); }
   };
 
@@ -768,8 +769,8 @@ export default function CompanyPreparationPage() {
         const cat = activeTab as keyof QuestionData;
         return { ...prev, [cat]: (prev[cat] || []).filter(q => q._id !== qId) };
       });
-    } catch (err: any) {
-      alert(err.message || "Failed to delete question.");
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to delete question.");
     }
   };
 

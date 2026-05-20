@@ -86,7 +86,7 @@ export default function ChatBot() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed");
       setMessages((prev) => [...prev, { role: "model", text: data.reply }]);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setMessages((prev) => [
         ...prev,
         { role: "model", text: "Sorry, I'm having trouble connecting right now. Please try again in a moment!" },

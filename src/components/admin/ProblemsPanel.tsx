@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Pencil, Trash2, X, Loader2, Code2, Search } from "lucide-react";
 import { adminProblemApi, courseApi } from "../../lib/api";
+import type { Problem, Course, ProblemExample, TestCase } from "@/types/models";
 
 const toSlug = (s: string) =>
   s
@@ -22,13 +23,31 @@ const DIFF_COLOR: Record<string, string> = {
   Hard: "bg-red-100 text-red-700",
 };
 
-const BLANK_EXAMPLE = { input: "", output: "", explanation: "" };
-const BLANK_TC = { input: "", expectedOutput: "", isHidden: false };
+const BLANK_EXAMPLE: ProblemExample = { input: "", output: "", explanation: "" };
+const BLANK_TC: TestCase = { input: "", expectedOutput: "", isHidden: false };
 
 const LANGS = ["python", "javascript", "cpp", "java"] as const;
 type Lang = (typeof LANGS)[number];
 
-const BLANK_FORM = () => ({
+interface ProblemForm {
+  title: string;
+  slug: string;
+  difficulty: string;
+  description: string;
+  topicTag: string;
+  leetcodeUrl: string;
+  companies: string;
+  solutionArticle: string;
+  frequency: number;
+  courseId: string;
+  order: number;
+  isPublished: boolean;
+  examples: ProblemExample[];
+  testCases: TestCase[];
+  starterCode: Record<Lang, string>;
+}
+
+const BLANK_FORM = (): ProblemForm => ({
   title: "",
   slug: "",
   difficulty: "Easy",
@@ -47,12 +66,12 @@ const BLANK_FORM = () => ({
 });
 
 export default function ProblemsPanel() {
-  const [items, setItems] = useState<any[]>([]);
-  const [courses, setCourses] = useState<any[]>([]);
+  const [items, setItems] = useState<Problem[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShow] = useState(false);
-  const [editItem, setEdit] = useState<any>(null);
-  const [form, setForm] = useState<any>(BLANK_FORM());
+  const [editItem, setEdit] = useState<Problem | null>(null);
+  const [form, setForm] = useState<ProblemForm>(BLANK_FORM());
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -60,13 +79,13 @@ export default function ProblemsPanel() {
   const [langTab, setLangTab] = useState<Lang>("python");
 
   const load = () =>
-    adminProblemApi.getAll().then((d: any) => {
+    adminProblemApi.getAll().then((d: Problem[]) => {
       setItems(Array.isArray(d) ? d : []);
       setLoading(false);
     });
   useEffect(() => {
     load();
-    courseApi.getAllAdmin().then((d: any) => setCourses(Array.isArray(d) ? d : (d.courses ?? [])));
+    courseApi.getAllAdmin().then((d: { courses?: Course[] } | Course[]) => setCourses(Array.isArray(d) ? d : ((d as { courses?: Course[] }).courses ?? [])));
   }, []);
 
   const openCreate = () => {
@@ -76,7 +95,7 @@ export default function ProblemsPanel() {
     setLangTab("python");
     setShow(true);
   };
-  const openEdit = (item: any) => {
+  const openEdit = (item: Problem) => {
     setEdit(item);
     setForm({
       title: item.title,
@@ -88,12 +107,17 @@ export default function ProblemsPanel() {
       companies: (item.companies || []).join(", ") || "",
       solutionArticle: item.solutionArticle || "",
       frequency: item.frequency ?? 3,
-      courseId: item.course?._id || item.course || "",
+      courseId: (item.course && typeof item.course === "object" ? (item.course as { _id: string })._id : item.course) || "",
       order: item.order ?? 0,
       isPublished: item.isPublished ?? true,
-      examples: item.examples?.length ? item.examples.map((e: any) => ({ ...BLANK_EXAMPLE, ...e })) : [{ ...BLANK_EXAMPLE }],
-      testCases: item.testCases?.length ? item.testCases.map((t: any) => ({ ...BLANK_TC, ...t })) : [{ ...BLANK_TC }],
-      starterCode: { python: "", javascript: "", cpp: "", java: "", ...(item.starterCode || {}) },
+      examples: item.examples?.length ? item.examples.map((e: ProblemExample) => ({ ...BLANK_EXAMPLE, ...e })) : [{ ...BLANK_EXAMPLE }],
+      testCases: item.testCases?.length ? item.testCases.map((t: TestCase) => ({ ...BLANK_TC, ...t })) : [{ ...BLANK_TC }],
+      starterCode: {
+        python: item.starterCode?.python ?? "",
+        javascript: item.starterCode?.javascript ?? "",
+        cpp: item.starterCode?.cpp ?? "",
+        java: item.starterCode?.java ?? "",
+      },
     });
     setError("");
     setLangTab("python");
@@ -122,8 +146,8 @@ export default function ProblemsPanel() {
       else await adminProblemApi.create(payload);
       setShow(false);
       await load();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setSaving(false);
     }
@@ -135,13 +159,13 @@ export default function ProblemsPanel() {
       await adminProblemApi.delete(deleteId);
       setDeleteId(null);
       await load();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "An error occurred");
     }
   };
 
-  const setExample = (i: number, k: string, v: string) => setForm((f: any) => ({ ...f, examples: f.examples.map((ex: any, j: number) => (j === i ? { ...ex, [k]: v } : ex)) }));
-  const setTc = (i: number, k: string, v: any) => setForm((f: any) => ({ ...f, testCases: f.testCases.map((tc: any, j: number) => (j === i ? { ...tc, [k]: v } : tc)) }));
+  const setExample = (i: number, k: string, v: string) => setForm(f => ({ ...f, examples: f.examples.map((ex, j) => (j === i ? { ...ex, [k]: v } : ex)) }));
+  const setTc = (i: number, k: string, v: string | boolean) => setForm(f => ({ ...f, testCases: f.testCases.map((tc, j) => (j === i ? { ...tc, [k]: v } : tc)) }));
 
   const filtered = items.filter((i) => !search || i.title?.toLowerCase().includes(search.toLowerCase()) || i.topicTag?.toLowerCase().includes(search.toLowerCase()));
 
@@ -227,43 +251,43 @@ export default function ProblemsPanel() {
                 <p className="text-xs font-black text-slate-400 uppercase tracking-wider">Basic Info</p>
                 <div className="grid grid-cols-2 gap-4">
                   <F label="Title *">
-                    <input className={inp} value={form.title} required onChange={(e) => setForm((f: any) => ({ ...f, title: e.target.value, slug: editItem ? f.slug : toSlug(e.target.value) }))} />
+                    <input className={inp} value={form.title} required onChange={(e) => setForm(f => ({ ...f, title: e.target.value, slug: editItem ? f.slug : toSlug(e.target.value) }))} />
                   </F>
                   <F label="Slug *">
-                    <input className={inp} value={form.slug} required onChange={(e) => setForm((f: any) => ({ ...f, slug: e.target.value }))} />
+                    <input className={inp} value={form.slug} required onChange={(e) => setForm(f => ({ ...f, slug: e.target.value }))} />
                   </F>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <F label="Difficulty">
-                    <select className={inp} value={form.difficulty} onChange={(e) => setForm((f: any) => ({ ...f, difficulty: e.target.value }))}>
+                    <select className={inp} value={form.difficulty} onChange={(e) => setForm(f => ({ ...f, difficulty: e.target.value }))}>
                       {["Easy", "Medium", "Hard"].map((d) => (
                         <option key={d}>{d}</option>
                       ))}
                     </select>
                   </F>
                   <F label="Topic Tag *">
-                    <input className={inp} value={form.topicTag} required placeholder="Arrays, DP, Graphs…" onChange={(e) => setForm((f: any) => ({ ...f, topicTag: e.target.value }))} />
+                    <input className={inp} value={form.topicTag} required placeholder="Arrays, DP, Graphs…" onChange={(e) => setForm(f => ({ ...f, topicTag: e.target.value }))} />
                   </F>
                   <F label="Frequency (1-5)">
-                    <input type="number" min={1} max={5} className={inp} value={form.frequency} onChange={(e) => setForm((f: any) => ({ ...f, frequency: Number(e.target.value) }))} />
+                    <input type="number" min={1} max={5} className={inp} value={form.frequency} onChange={(e) => setForm(f => ({ ...f, frequency: Number(e.target.value) }))} />
                   </F>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <F label="LeetCode URL">
-                    <input className={inp} value={form.leetcodeUrl} placeholder="https://leetcode.com/problems/…" onChange={(e) => setForm((f: any) => ({ ...f, leetcodeUrl: e.target.value }))} />
+                    <input className={inp} value={form.leetcodeUrl} placeholder="https://leetcode.com/problems/…" onChange={(e) => setForm(f => ({ ...f, leetcodeUrl: e.target.value }))} />
                   </F>
                   <F label="Companies (comma-separated)">
-                    <input className={inp} value={form.companies} placeholder="Google, Amazon, Facebook" onChange={(e) => setForm((f: any) => ({ ...f, companies: e.target.value }))} />
+                    <input className={inp} value={form.companies} placeholder="Google, Amazon, Facebook" onChange={(e) => setForm(f => ({ ...f, companies: e.target.value }))} />
                   </F>
                 </div>
                 <F label="Solution Article (HTML)">
-                  <textarea className={inp + " font-mono text-xs"} rows={5} value={form.solutionArticle} placeholder="<h2>Solution</h2><p>Explain the approach.</p>" onChange={(e) => setForm((f: any) => ({ ...f, solutionArticle: e.target.value }))} />
+                  <textarea className={inp + " font-mono text-xs"} rows={5} value={form.solutionArticle} placeholder="<h2>Solution</h2><p>Explain the approach.</p>" onChange={(e) => setForm(f => ({ ...f, solutionArticle: e.target.value }))} />
                 </F>
                 <div className="grid grid-cols-2 gap-4">
                   <F label="Course (optional)">
-                    <select className={inp} value={form.courseId} onChange={(e) => setForm((f: any) => ({ ...f, courseId: e.target.value }))}>
+                    <select className={inp} value={form.courseId} onChange={(e) => setForm(f => ({ ...f, courseId: e.target.value }))}>
                       <option value="">— Standalone —</option>
-                      {courses.map((c: any) => (
+                      {courses.map((c: Course) => (
                         <option key={c._id} value={c._id}>
                           {c.title}
                         </option>
@@ -278,17 +302,17 @@ export default function ProblemsPanel() {
                     value={form.description}
                     required
                     placeholder="## Problem Statement&#10;&#10;Given an array…&#10;&#10;**Constraints:**&#10;- 1 ≤ n ≤ 10^5"
-                    onChange={(e) => setForm((f: any) => ({ ...f, description: e.target.value }))}
+                    onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
                   />
                 </F>
                 <div className="flex items-center gap-4">
                   <div className="w-32">
                     <F label="Order">
-                      <input type="number" className={inp} value={form.order} onChange={(e) => setForm((f: any) => ({ ...f, order: Number(e.target.value) }))} />
+                      <input type="number" className={inp} value={form.order} onChange={(e) => setForm(f => ({ ...f, order: Number(e.target.value) }))} />
                     </F>
                   </div>
                   <div className="flex items-end pb-1 gap-2">
-                    <input type="checkbox" id="pub" checked={form.isPublished} onChange={(e) => setForm((f: any) => ({ ...f, isPublished: e.target.checked }))} />
+                    <input type="checkbox" id="pub" checked={form.isPublished} onChange={(e) => setForm(f => ({ ...f, isPublished: e.target.checked }))} />
                     <label htmlFor="pub" className="text-sm font-semibold text-slate-700">
                       Published
                     </label>
@@ -300,16 +324,16 @@ export default function ProblemsPanel() {
               <section className="space-y-3 border-t border-slate-100 pt-5">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-black text-slate-400 uppercase tracking-wider">Examples ({form.examples.length})</p>
-                  <button type="button" onClick={() => setForm((f: any) => ({ ...f, examples: [...f.examples, { ...BLANK_EXAMPLE }] }))} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100">
+                  <button type="button" onClick={() => setForm(f => ({ ...f, examples: [...f.examples, { ...BLANK_EXAMPLE }] }))} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100">
                     <Plus className="w-3 h-3" /> Add Example
                   </button>
                 </div>
-                {form.examples.map((ex: any, i: number) => (
+                {form.examples.map((ex, i) => (
                   <div key={i} className="border border-slate-200 rounded-xl p-4 space-y-2 bg-slate-50">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-500">Example {i + 1}</span>
                       {form.examples.length > 1 && (
-                        <button type="button" onClick={() => setForm((f: any) => ({ ...f, examples: f.examples.filter((_: any, j: number) => j !== i) }))} className="p-1 text-slate-400 hover:text-red-500">
+                        <button type="button" onClick={() => setForm(f => ({ ...f, examples: f.examples.filter((_, j) => j !== i) }))} className="p-1 text-slate-400 hover:text-red-500">
                           <X className="w-3.5 h-3.5" />
                         </button>
                       )}
@@ -336,12 +360,12 @@ export default function ProblemsPanel() {
               <section className="space-y-3 border-t border-slate-100 pt-5">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-black text-slate-400 uppercase tracking-wider">Test Cases ({form.testCases.length})</p>
-                  <button type="button" onClick={() => setForm((f: any) => ({ ...f, testCases: [...f.testCases, { ...BLANK_TC }] }))} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold hover:bg-emerald-100">
+                  <button type="button" onClick={() => setForm(f => ({ ...f, testCases: [...f.testCases, { ...BLANK_TC }] }))} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold hover:bg-emerald-100">
                     <Plus className="w-3 h-3" /> Add Test Case
                   </button>
                 </div>
                 <p className="text-xs text-slate-500">At least 50 hidden test cases are required for judge submissions.</p>
-                {form.testCases.map((tc: any, i: number) => (
+                {form.testCases.map((tc, i) => (
                   <div key={i} className={`border rounded-xl p-4 space-y-2 ${tc.isHidden ? "border-orange-200 bg-orange-50" : "border-slate-200 bg-slate-50"}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -353,7 +377,7 @@ export default function ProblemsPanel() {
                         </label>
                       </div>
                       {form.testCases.length > 1 && (
-                        <button type="button" onClick={() => setForm((f: any) => ({ ...f, testCases: f.testCases.filter((_: any, j: number) => j !== i) }))} className="p-1 text-slate-400 hover:text-red-500">
+                        <button type="button" onClick={() => setForm(f => ({ ...f, testCases: f.testCases.filter((_, j) => j !== i) }))} className="p-1 text-slate-400 hover:text-red-500">
                           <X className="w-3.5 h-3.5" />
                         </button>
                       )}
@@ -388,7 +412,7 @@ export default function ProblemsPanel() {
                     </button>
                   ))}
                 </div>
-                <textarea value={form.starterCode[langTab] || ""} onChange={(e) => setForm((f: any) => ({ ...f, starterCode: { ...f.starterCode, [langTab]: e.target.value } }))} rows={8} placeholder={`# ${langTab} starter code`} className={inp + " font-mono text-xs"} />
+                <textarea value={form.starterCode[langTab] || ""} onChange={(e) => setForm(f => ({ ...f, starterCode: { ...f.starterCode, [langTab]: e.target.value } }))} rows={8} placeholder={`# ${langTab} starter code`} className={inp + " font-mono text-xs"} />
               </section>
 
               {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
