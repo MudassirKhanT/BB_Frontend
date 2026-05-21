@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Play, CheckCircle2, Circle, ChevronDown, ChevronUp, ExternalLink,
   RotateCcw, Copy, Check, Loader2, Terminal, BookOpen, FlaskConical,
-  ChevronRight, ChevronLeft, Code2, Trophy, Undo2, Redo2, Lock,
+  Code2, Trophy, Undo2, Redo2, Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { problemApi, compileApi } from "@/lib/api";
