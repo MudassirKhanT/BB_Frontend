@@ -22,18 +22,19 @@ const CARDS = [
   { key: "pendingExp", label: "Pending Approvals", icon: AlertCircle,   from: "from-orange-500",  to: "to-orange-600",  bg: "bg-orange-50",  text: "text-orange-600",  nav: "interview-exp" },
 ] as const;
 
-export default function OverviewPanel({ onNav }: { onNav: (id: string) => void }) {
+export default function OverviewPanel({ onNav, refreshKey = 0 }: { onNav: (id: string) => void; refreshKey?: number }) {
   const [stats, setStats] = useState<Stats>({ courses: 0, problems: 0, companies: 0, contests: 0, mockExams: 0, resources: 0, users: 0, pendingExp: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     Promise.allSettled([
       api.get("/course"),
       api.get("/problems/admin/all"),
       api.get("/company"),
-      api.get("/contest"),
+      api.get("/contest/admin/all"),
       api.get("/mock/admin/all"),
-      api.get("/resource"),
+      api.get("/resource/admin/all"),
       api.get("/user/admin/all"),
       api.get("/interview-experience/pending"),
     ]).then(results => {
@@ -50,7 +51,7 @@ export default function OverviewPanel({ onNav }: { onNav: (id: string) => void }
       });
       setLoading(false);
     });
-  }, []);
+  }, [refreshKey]);
 
   const hasPending = stats.pendingExp > 0;
 

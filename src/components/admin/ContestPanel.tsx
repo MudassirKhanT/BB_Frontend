@@ -38,6 +38,7 @@ interface ContestForm {
   startTime: string;
   endTime: string;
   banner: string;
+  type: "weekly" | "monthly" | "custom";
   isPublished: boolean;
 }
 
@@ -359,8 +360,14 @@ function ContestProblemsView({ contest, onBack }: { contest: Contest; onBack: ()
 }
 
 // ── Main ContestPanel ──────────────────────────────────────────────────────────
+const TYPE_OPTIONS = [
+  { value: "custom",  label: "Custom" },
+  { value: "weekly",  label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+] as const;
+
 const BLANK_CONTEST: ContestForm = {
-  title: "", slug: "", description: "", startTime: "", endTime: "", banner: BANNERS[0], isPublished: false,
+  title: "", slug: "", description: "", startTime: "", endTime: "", banner: BANNERS[0], type: "custom", isPublished: false,
 };
 
 export default function ContestPanel() {
@@ -374,7 +381,7 @@ export default function ContestPanel() {
   const [error, setError]       = useState("");
   const [activeContest, setActiveContest] = useState<Contest | null>(null);
 
-  const load = () => contestApi.getAll().then((d: { contests?: Contest[] } | Contest[]) => {
+  const load = () => contestApi.adminGetAll().then((d: { contests?: Contest[] } | Contest[]) => {
     setItems(Array.isArray(d) ? d : (d as { contests?: Contest[] }).contests ?? []);
     setLoading(false);
   });
@@ -385,7 +392,7 @@ export default function ContestPanel() {
     setEdit(item);
     setForm({ title: item.title, slug: item.slug, description: item.description||"",
       startTime: toLocalDT(item.startTime), endTime: toLocalDT(item.endTime),
-      banner: item.banner||BANNERS[0], isPublished: item.isPublished??false });
+      banner: item.banner||BANNERS[0], type: item.type||"custom", isPublished: item.isPublished??false });
     setError(""); setShow(true);
   };
 
@@ -436,7 +443,7 @@ export default function ContestPanel() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-100">
-                <tr>{["Title","Start","End","Problems","Registrations","Status","Actions"].map(h => (
+                <tr>{["Title","Type","Start","End","Problems","Registrations","Status","Actions"].map(h => (
                   <th key={h} className={`px-4 py-3 font-bold text-slate-600 ${h==="Actions"?"text-right":"text-left"}`}>{h}</th>
                 ))}</tr>
               </thead>
@@ -452,6 +459,13 @@ export default function ContestPanel() {
                             {item.title} <ChevronRight className="w-3.5 h-3.5" />
                           </button>
                         </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {item.type === "weekly"
+                          ? <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-blue-100 text-blue-700">Weekly</span>
+                          : item.type === "monthly"
+                          ? <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-violet-100 text-violet-700">Monthly</span>
+                          : <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-slate-100 text-slate-500">Custom</span>}
                       </td>
                       <td className="px-4 py-3 text-slate-500 text-xs">{new Date(item.startTime).toLocaleDateString()}</td>
                       <td className="px-4 py-3 text-slate-500 text-xs">{new Date(item.endTime).toLocaleDateString()}</td>
@@ -498,6 +512,28 @@ export default function ContestPanel() {
               </div>
               <F label="Description">
                 <textarea className={inp} rows={2} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+              </F>
+              <F label="Contest Type">
+                <div className="flex gap-2">
+                  {TYPE_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, type: opt.value }))}
+                      className={`flex-1 py-2 rounded-xl text-sm font-bold border transition-all ${
+                        form.type === opt.value
+                          ? opt.value === "weekly"
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : opt.value === "monthly"
+                            ? "bg-violet-600 text-white border-violet-600"
+                            : "bg-slate-700 text-white border-slate-700"
+                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </F>
               <div className="grid grid-cols-2 gap-4">
                 <F label="Start Time *">

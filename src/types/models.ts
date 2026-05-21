@@ -205,6 +205,7 @@ export interface Contest {
   problems: ContestProblemEntry[];
   registrations: string[];
   banner: string;
+  type: "weekly" | "monthly" | "custom";
   isPublished: boolean;
   totalRegistrations: number;
   status?: "upcoming" | "ongoing" | "ended";

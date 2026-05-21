@@ -31,6 +31,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const [active, setActive] = useState("overview");
   const [sideOpen, setSideOpen] = useState(false);
+  const [overviewKey, setOverviewKey] = useState(0);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -44,16 +45,22 @@ export default function AdminDashboard() {
     navigate("/login");
   };
 
+  const navTo = (id: string) => {
+    if (id === "overview") setOverviewKey((k) => k + 1);
+    setActive(id);
+    setSideOpen(false);
+  };
+
   const PANELS: Record<string, React.ReactNode> = {
-    overview:       <OverviewPanel onNav={setActive} />,
-    courses:        <CoursesPanel />,
-    problems:       <ProblemsPanel />,
-    companies:      <CompanyPanel />,
-    contests:       <ContestPanel />,
-    "mock-exams":   <MockPanel />,
-    resources:      <ResourcePanel />,
-    "interview-exp":<InterviewExpPanel />,
-    users:          <UsersPanel />,
+    overview:       <OverviewPanel onNav={navTo} refreshKey={overviewKey} />,
+    courses:         <CoursesPanel />,
+    problems:        <ProblemsPanel />,
+    companies:       <CompanyPanel />,
+    contests:        <ContestPanel />,
+    "mock-exams":    <MockPanel />,
+    resources:       <ResourcePanel />,
+    "interview-exp": <InterviewExpPanel />,
+    users:           <UsersPanel />,
   };
 
   const currentLabel = NAV.find(n => n.id === active)?.label ?? "Admin";
@@ -86,7 +93,7 @@ export default function AdminDashboard() {
         {/* Nav items */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
           {NAV.map(({ id, label, icon: Icon }) => (
-            <button key={id} onClick={() => { setActive(id); setSideOpen(false); }}
+            <button key={id} onClick={() => navTo(id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all group ${
                 active === id
                   ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-violet-900/40"

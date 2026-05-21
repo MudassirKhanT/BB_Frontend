@@ -173,6 +173,7 @@ export const mockApi = {
 // ── Contest API ──
 export const contestApi = {
   getAll: () => api.get("/contest"),
+  adminGetAll: () => api.get("/contest/admin/all"),
   getBySlug: (slug: string) => api.get(`/contest/${slug}`),
   getLeaderboard: (slug: string) => api.get(`/contest/${slug}/leaderboard`),
   register: (slug: string) => api.post(`/contest/${slug}/register`, {}),
