@@ -53,7 +53,13 @@ interface Course {
 }
 
 const ICON_MAP: Record<string, React.ElementType> = {
-  Code2, BarChart3, Globe, Zap, BookOpen, TrendingUp, Award,
+  Code2,
+  BarChart3,
+  Globe,
+  Zap,
+  BookOpen,
+  TrendingUp,
+  Award,
 };
 
 const LEVEL_BADGES: Record<string, string> = {
@@ -82,10 +88,7 @@ export default function CourseDetail() {
       setLoading(true);
       setError(null);
       try {
-        const [courseData, curriculumData] = await Promise.all([
-          courseApi.getBySlug(slug!),
-          courseApi.getCurriculum(slug!),
-        ]);
+        const [courseData, curriculumData] = await Promise.all([courseApi.getBySlug(slug!), courseApi.getCurriculum(slug!)]);
         setCourse(courseData);
         setCurriculum(curriculumData);
         // Expand first chapter by default
@@ -134,10 +137,7 @@ export default function CourseDetail() {
   };
 
   const totalLessons = curriculum.reduce((s, t) => s + t.subtopics.length, 0);
-  const totalReadTime = curriculum.reduce(
-    (s, t) => s + t.subtopics.reduce((ss, st) => ss + st.estimatedReadTime, 0),
-    0,
-  );
+  const totalReadTime = curriculum.reduce((s, t) => s + t.subtopics.reduce((ss, st) => ss + st.estimatedReadTime, 0), 0);
   const visibleChapters = showAllChapters ? curriculum : curriculum.slice(0, 4);
 
   if (loading) {
@@ -158,7 +158,9 @@ export default function CourseDetail() {
           <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-slate-700 mb-2">Course not found</h2>
           <p className="text-slate-500 mb-4">{error}</p>
-          <Link to="/courses"><Button variant="outline">Browse Courses</Button></Link>
+          <Link to="/courses">
+            <Button variant="outline">Browse Courses</Button>
+          </Link>
         </div>
       </div>
     );
@@ -179,25 +181,13 @@ export default function CourseDetail() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
           <div className="max-w-3xl">
             <div className="flex flex-wrap items-center gap-2 mb-4">
-              <Badge className="bg-white/20 text-white border-white/30 text-xs">
-                {course.category}
-              </Badge>
-              <Badge className="bg-white/20 text-white border-white/30 text-xs">
-                {course.level}
-              </Badge>
-              {enrollment && (
-                <Badge className="bg-green-500 text-white border-0 text-xs">
-                  Enrolled · {enrollment.progress}% complete
-                </Badge>
-              )}
+              <Badge className="bg-white/20 text-white border-white/30 text-xs">{course.category}</Badge>
+              <Badge className="bg-white/20 text-white border-white/30 text-xs">{course.level}</Badge>
+              {enrollment && <Badge className="bg-green-500 text-white border-0 text-xs">Enrolled · {enrollment.progress}% complete</Badge>}
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-black text-white mb-4 leading-tight">
-              {course.title}
-            </h1>
-            <p className="text-blue-100 text-lg mb-6 leading-relaxed">
-              {course.shortDescription || course.description}
-            </p>
+            <h1 className="text-3xl sm:text-4xl font-black text-white mb-4 leading-tight">{course.title}</h1>
+            <p className="text-blue-100 text-lg mb-6 leading-relaxed">{course.shortDescription || course.description}</p>
 
             {/* Stats row */}
             <div className="flex flex-wrap items-center gap-5 text-sm text-blue-100 mb-6">
@@ -285,15 +275,15 @@ export default function CourseDetail() {
                   <span>·</span>
                   <span>{totalLessons} lessons</span>
                   <span>·</span>
-                  <span>{Math.round(totalReadTime / 60)}h {totalReadTime % 60}m total length</span>
+                  <span>
+                    {Math.round(totalReadTime / 60)}h {totalReadTime % 60}m total length
+                  </span>
                 </div>
 
                 <div className="space-y-2">
                   {visibleChapters.map((chapter) => {
                     const isExpanded = expandedChapters.has(chapter._id);
-                    const completedInChapter = chapter.subtopics.filter(
-                      (st) => enrollment?.completedSubtopics?.includes(st._id),
-                    ).length;
+                    const completedInChapter = chapter.subtopics.filter((st) => enrollment?.completedSubtopics?.includes(st._id)).length;
 
                     return (
                       <div key={chapter._id} className="border border-slate-200 rounded-xl overflow-hidden">
@@ -313,8 +303,7 @@ export default function CourseDetail() {
                             <div className="min-w-0">
                               <p className="font-bold text-slate-800 text-sm">{chapter.title}</p>
                               <p className="text-xs text-slate-500 mt-0.5">
-                                {chapter.subtopics.length} lessons ·{" "}
-                                {chapter.subtopics.reduce((s, st) => s + st.estimatedReadTime, 0)} min
+                                {chapter.subtopics.length} lessons · {chapter.subtopics.reduce((s, st) => s + st.estimatedReadTime, 0)} min
                                 {enrollment && (
                                   <span className="text-green-600 ml-1.5">
                                     · {completedInChapter}/{chapter.subtopics.length} done
@@ -323,11 +312,7 @@ export default function CourseDetail() {
                               </p>
                             </div>
                           </div>
-                          {isExpanded ? (
-                            <ChevronUp className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                          )}
+                          {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />}
                         </button>
 
                         {isExpanded && (
@@ -336,26 +321,12 @@ export default function CourseDetail() {
                               const isDone = enrollment?.completedSubtopics?.includes(subtopic._id);
                               return (
                                 <div key={subtopic._id} className="flex items-center gap-3 px-4 py-3 bg-white hover:bg-blue-50/40 transition-colors">
-                                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    {isDone ? (
-                                      <CheckCircle2 className="w-5 h-5 text-green-500" />
-                                    ) : subtopic.isFreePreview ? (
-                                      <PlayCircle className="w-5 h-5 text-blue-500" />
-                                    ) : (
-                                      <Lock className="w-4 h-4 text-slate-300" />
-                                    )}
-                                  </div>
+                                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">{isDone ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : subtopic.isFreePreview ? <PlayCircle className="w-5 h-5 text-blue-500" /> : <Lock className="w-4 h-4 text-slate-300" />}</div>
                                   <div className="flex-1 min-w-0">
-                                    <p className={`text-sm font-medium truncate ${isDone ? "text-green-700" : "text-slate-700"}`}>
-                                      {subtopic.title}
-                                    </p>
+                                    <p className={`text-sm font-medium truncate ${isDone ? "text-green-700" : "text-slate-700"}`}>{subtopic.title}</p>
                                   </div>
                                   <div className="flex items-center gap-2 flex-shrink-0">
-                                    {subtopic.isFreePreview && !enrollment && (
-                                      <Badge className="bg-blue-50 text-blue-600 border-blue-200 text-[10px]">
-                                        Preview
-                                      </Badge>
-                                    )}
+                                    {subtopic.isFreePreview && !enrollment && <Badge className="bg-blue-50 text-blue-600 border-blue-200 text-[10px]">Preview</Badge>}
                                     <span className="text-xs text-slate-400">{subtopic.estimatedReadTime} min</span>
                                   </div>
                                 </div>
@@ -369,14 +340,15 @@ export default function CourseDetail() {
                 </div>
 
                 {curriculum.length > 4 && (
-                  <button
-                    onClick={() => setShowAllChapters(!showAllChapters)}
-                    className="mt-4 w-full py-3 border border-slate-200 rounded-xl text-blue-600 font-semibold text-sm hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
-                  >
+                  <button onClick={() => setShowAllChapters(!showAllChapters)} className="mt-4 w-full py-3 border border-slate-200 rounded-xl text-blue-600 font-semibold text-sm hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
                     {showAllChapters ? (
-                      <><ChevronUp className="w-4 h-4" /> Show less</>
+                      <>
+                        <ChevronUp className="w-4 h-4" /> Show less
+                      </>
                     ) : (
-                      <><ChevronDown className="w-4 h-4" /> Show {curriculum.length - 4} more chapters</>
+                      <>
+                        <ChevronDown className="w-4 h-4" /> Show {curriculum.length - 4} more chapters
+                      </>
                     )}
                   </button>
                 )}
@@ -395,11 +367,7 @@ export default function CourseDetail() {
                     <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center mx-auto mb-2 shadow-xl">
                       <Icon className="w-8 h-8 text-white" />
                     </div>
-                    {enrollment && (
-                      <p className="text-white text-xs font-medium bg-white/20 px-3 py-1 rounded-full">
-                        {enrollment.progress}% Complete
-                      </p>
-                    )}
+                    {enrollment && <p className="text-white text-xs font-medium bg-white/20 px-3 py-1 rounded-full">{enrollment.progress}% Complete</p>}
                   </div>
                 </div>
 
@@ -417,39 +385,18 @@ export default function CourseDetail() {
                     </div>
                   )}
 
-                  <div className="text-center mb-5">
-                    {course.price === 0 ? (
-                      <div className="text-3xl font-black text-green-600">Free</div>
-                    ) : (
-                      <div className="text-3xl font-black text-slate-900">
-                        ₹{course.price.toLocaleString()}
-                      </div>
-                    )}
-                  </div>
+                  <div className="text-center mb-5">{course.price === 0 ? <div className="text-3xl font-black text-green-600">Free</div> : <div className="text-3xl font-black text-slate-900">₹{course.price.toLocaleString()}</div>}</div>
 
-                  <Button
-                    onClick={handleEnroll}
-                    disabled={enrolling}
-                    className="w-full h-12 font-bold text-base shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white gap-2"
-                  >
-                    {enrolling ? (
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <Play className="w-5 h-5" />
-                    )}
+                  <Button onClick={handleEnroll} disabled={enrolling} className="w-full h-12 font-bold text-base shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white gap-2">
+                    {enrolling ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Play className="w-5 h-5" />}
                     {enrollment ? "Continue Learning" : course.price === 0 ? "Enroll Free" : "Enroll Now"}
                   </Button>
 
-                  {enrollError && (
-                    <p className="mt-2 text-sm text-red-600 text-center font-medium">{enrollError}</p>
-                  )}
+                  {enrollError && <p className="mt-2 text-sm text-red-600 text-center font-medium">{enrollError}</p>}
 
                   {enrollment && (
                     <Link to={`/practice/${slug}`} className="block mt-2">
-                      <Button
-                        variant="outline"
-                        className="w-full h-11 font-bold border-blue-200 text-blue-600 hover:bg-blue-50 gap-2"
-                      >
+                      <Button variant="outline" className="w-full h-11 font-bold border-blue-200 text-blue-600 hover:bg-blue-50 gap-2">
                         <Code2 className="w-4 h-4" />
                         Practice Problems
                       </Button>
@@ -473,20 +420,10 @@ export default function CourseDetail() {
                   <div className="mt-5 pt-4 border-t border-slate-100">
                     <div className="flex items-center gap-2.5 mb-1">
                       <Avatar className="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-500">
-                        <AvatarFallback className="text-white font-bold text-xs">
-                          {typeof course.author === "string"
-                            ? "IN"
-                            : (course.author.username || course.author.name || "IN")
-                                .slice(0, 2)
-                                .toUpperCase()}
-                        </AvatarFallback>
+                        <AvatarFallback className="text-white font-bold text-xs">{typeof course.author === "string" ? "IN" : (course.author.username || course.author.name || "IN").slice(0, 2).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-sm font-semibold text-slate-800">
-                          {typeof course.author === "string"
-                            ? "Instructor"
-                            : course.author.username || course.author.name || "Instructor"}
-                        </p>
+                        <p className="text-sm font-semibold text-slate-800">{typeof course.author === "string" ? "Instructor" : course.author.username || course.author.name || "Instructor"}</p>
                         <p className="text-xs text-slate-500">Course Instructor</p>
                       </div>
                     </div>
