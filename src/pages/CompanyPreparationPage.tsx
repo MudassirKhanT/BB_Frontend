@@ -887,7 +887,7 @@ export default function CompanyPreparationPage() {
           </div>
           <div className="flex items-center gap-3">
             {isAdmin && (
-              <span className="hidden sm:flex items-center gap-1.5 text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-3 py-1 uppercase tracking-wider">
+              <span className="flex lg:hidden items-center gap-1.5 text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-3 py-1 uppercase tracking-wider">
                 <Shield size={10} /> Admin Mode
               </span>
             )}
@@ -916,8 +916,8 @@ export default function CompanyPreparationPage() {
         </div>
       </div>
 
-      {/* Tab Nav */}
-      <div className="bg-white border-b border-slate-100 sticky top-14 z-40">
+      {/* Tab Nav — mobile only */}
+      <div className="bg-white border-b border-slate-100 sticky top-14 z-40 lg:hidden">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex gap-0 overflow-x-auto scrollbar-hide">
             {TABS.map((tab) => {
@@ -944,8 +944,50 @@ export default function CompanyPreparationPage() {
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      {/* Two-column layout: Sidebar + Content */}
+      <div className="max-w-6xl mx-auto flex">
+
+        {/* LEFT SIDEBAR — desktop */}
+        <aside className="hidden lg:flex flex-col w-64 shrink-0 border-r border-slate-100 bg-white sticky top-14 self-start h-[calc(100vh-3.5rem)] overflow-y-auto">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Preparation Guide</p>
+            <h3 className="text-sm font-black text-slate-800 truncate">{company.name}</h3>
+          </div>
+          <nav className="p-3 flex-1 space-y-0.5">
+            {TABS.map((tab) => {
+              const SideIcon = tab.icon;
+              const isActiveSide = activeTab === tab.key;
+              const sideCount = tab.key === "experiences" ? experienceCount : (questions[tab.key as keyof QuestionData] || []).length;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => { setActiveTab(tab.key); setShowAddForm(false); setEditTarget(null); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all text-left ${isActiveSide ? "bg-primary/10 text-primary font-semibold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium"}`}
+                >
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${isActiveSide ? "bg-primary/20" : "bg-slate-100"}`}>
+                    <SideIcon size={14} className={isActiveSide ? "text-primary" : "text-slate-500"} />
+                  </div>
+                  <span className="flex-1 truncate">{tab.key === "experiences" ? "Interview Exp." : tab.label}</span>
+                  {sideCount > 0 && (
+                    <span className={`text-[10px] font-black rounded-full px-1.5 py-0.5 flex-shrink-0 ${isActiveSide ? "bg-primary/20 text-primary" : "bg-slate-100 text-slate-500"}`}>
+                      {sideCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+          {isAdmin && (
+            <div className="p-3 border-t border-slate-100">
+              <div className="flex items-center justify-center gap-1.5 text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200 rounded-xl px-3 py-2 uppercase tracking-wider">
+                <Shield size={10} /> Admin Mode
+              </div>
+            </div>
+          )}
+        </aside>
+
+        {/* RIGHT CONTENT */}
+        <div className="flex-1 min-w-0 px-4 sm:px-6 py-8 space-y-8">
         {/* ── Admin: Add Question Form ── */}
         {isAdmin && activeTab !== "experiences" && showAddForm && <AdminQuestionForm category={activeTab} companyId={company._id} editTarget={editTarget} onSaved={handleQuestionSaved} onCancel={cancelForm} />}
 
@@ -1089,7 +1131,8 @@ export default function CompanyPreparationPage() {
             <SubmitExperienceForm slug={slug!} onSubmitted={loadExperiences} />
           </div>
         )}
-      </div>
+        </div>{/* end right content */}
+      </div>{/* end two-column layout */}
 
       {/* Bottom discuss section (non-experience tabs) */}
       {activeTab !== "experiences" && (
