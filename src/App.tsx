@@ -30,6 +30,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import PracticePage from "./pages/PracticePage";
 import JobsPage from "./pages/JobsPage";
 import ProfilePage from "./pages/ProfilePage";
+import RoadmapGeneratorPage from "./pages/RoadmapGeneratorPage";
 
 function App() {
   return (
@@ -69,6 +70,7 @@ function App() {
         <Route path="/jobs" element={<JobsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/roadmap-generator" element={<RoadmapGeneratorPage />} />
       </Routes>
     </>
   );
