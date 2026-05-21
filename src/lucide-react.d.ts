@@ -21,9 +21,6 @@ declare module "lucide-react" {
   export const Calculator: FC<IconProps>;
   export const Layers: FC<IconProps>;
   export const PlayCircle: FC<IconProps>;
-  export const ChevronRight: FC<IconProps>;
-  export const PlayCircle: FC<IconProps>;
-
   export const ThumbsUp: FC<IconProps>;
 
   // ── Status & Feedback ─────────────────────────────────────────────────────────
@@ -88,10 +85,12 @@ declare module "lucide-react" {
   export const VolumeX: FC<IconProps>;
   export const Terminal: FC<IconProps>;
   export const Send: FC<IconProps>;
+  export const Video: FC<IconProps>;
 
   // ── Communication & Social ────────────────────────────────────────────────────
   export const Mail: FC<IconProps>;
   export const MessageSquare: FC<IconProps>;
+  export const MessageCircle: FC<IconProps>;
   export const Heart: FC<IconProps>;
   export const Share2: FC<IconProps>;
   export const Quote: FC<IconProps>;
@@ -110,6 +109,7 @@ declare module "lucide-react" {
   export const GitBranch: FC<IconProps>;
   export const FlaskConical: FC<IconProps>;
   export const ListChecks: FC<IconProps>;
+  export const GripVertical: FC<IconProps>;
 
   // ── Learning & Content ────────────────────────────────────────────────────────
   export const BookOpen: FC<IconProps>;
