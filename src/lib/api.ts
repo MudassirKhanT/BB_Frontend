@@ -221,6 +221,12 @@ export const jobsApi = {
   getStatus: () => api.get("/jobs/status"),
 };
 
+// ── Roadmap API ──
+export const roadmapApi = {
+  generate: (data: { companyType: string; timeline: string; skillLevel?: string }) =>
+    api.post("/roadmap/generate", data),
+};
+
 // ── Resource API ──
 export const resourceApi = {
   getAll: (params?: { type?: string; category?: string; difficulty?: string }) => {

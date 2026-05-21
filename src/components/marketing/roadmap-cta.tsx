@@ -102,7 +102,12 @@ export default function RoadmapCTA() {
                 </div>
 
                 <button
-                  onClick={() => navigate(localStorage.getItem("token") ? "/courses" : "/signup")}
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    if (company) params.set("company", company);
+                    if (timeline) params.set("timeline", timeline);
+                    navigate(`/roadmap-generator${params.toString() ? `?${params.toString()}` : ""}`);
+                  }}
                   className="w-full h-12 rounded-xl bg-primary text-white text-sm font-black flex items-center justify-center gap-2 shadow-lg shadow-primary/25 hover:bg-primary/90 hover:shadow-primary/40 hover:-translate-y-px active:translate-y-0 transition-all group"
                 >
                   Generate my plan

@@ -13,6 +13,7 @@ const resourceLinks = [
   { label: "Problem of the Day", to: "/problem-of-the-day" },
   { label: "Mock Tests", to: "/mock-assessments" },
   { label: "Resume AI", to: "/resume-analyzer" },
+  { label: "AI Roadmap", to: "/roadmap-generator" },
   { label: "Interview Experiences", to: "/resources/interview-experiences" },
   { label: "Resource Hub", to: "/resources" },
   { label: "How It Works", to: "/how-it-works" },
