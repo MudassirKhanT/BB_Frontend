@@ -141,8 +141,8 @@ export default function PracticePage() {
     setLoading(true);
     problemApi
       .getAll()
-      .then((data: any) => setTopics(data.topics || []))
-      .catch((err: any) => setError(err.message || "Failed to load problems"))
+      .then((data) => setTopics((data as { topics: TopicGroup[] }).topics || []))
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Failed to load problems"))
       .finally(() => setLoading(false));
   }, []);
 

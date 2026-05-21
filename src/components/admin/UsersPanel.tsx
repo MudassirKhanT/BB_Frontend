@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Loader2, UserCog, ShieldOff, Shield, RefreshCw, Search, Crown } from "lucide-react";
 import { adminUserApi } from "../../lib/api";
+import type { User } from "@/types/models";
 
 const ROLE_COLOR: Record<string, string> = {
   admin: "bg-violet-100 text-violet-700",
@@ -9,7 +10,7 @@ const ROLE_COLOR: Record<string, string> = {
 };
 
 export default function UsersPanel() {
-  const [users, setUsers]     = useState<any[]>([]);
+  const [users, setUsers]     = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [acting, setActing]   = useState<string | null>(null);
   const [search, setSearch]   = useState("");
@@ -17,27 +18,27 @@ export default function UsersPanel() {
 
   const load = () => {
     setLoading(true);
-    adminUserApi.getAll().then((d: any) => {
+    adminUserApi.getAll().then((d) => {
       setUsers(Array.isArray(d) ? d : []);
       setLoading(false);
     }).catch(() => setLoading(false));
   };
   useEffect(() => { load(); }, []);
 
-  const toggleBlock = async (user: any) => {
+  const toggleBlock = async (user: User) => {
     setActing(user._id);
     try {
       if (user.isBlocked) await adminUserApi.unblock(user._id);
       else await adminUserApi.block(user._id);
       load();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: unknown) { alert(err instanceof Error ? err.message : "An error occurred"); }
     finally { setActing(null); }
   };
 
-  const changeRole = async (user: any, role: string) => {
+  const changeRole = async (user: User, role: string) => {
     setActing(user._id);
     try { await adminUserApi.setRole(user._id, role); load(); }
-    catch (err: any) { alert(err.message); }
+    catch (err: unknown) { alert(err instanceof Error ? err.message : "An error occurred"); }
     finally { setActing(null); }
   };
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Flame, Trophy, Calendar, Code2, TrendingUp, Clock,
+  Flame, Trophy, Code2, TrendingUp, Clock,
   CheckCircle2, Star, Target, BookOpen, Zap, Medal,
   ChevronRight, ChevronLeft, Play, Lock, Award, BarChart3,
   Briefcase, Brain, Users, FileText, Globe, Database,

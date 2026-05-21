@@ -73,7 +73,7 @@ export default function WhyUs() {
 
         {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {FEATURES.map(({ icon: Icon, title, description, color, bg, border }) => (
+          {FEATURES.map(({ icon: Icon, title, description, color, bg }) => (
             <div
               key={title}
               className={`rounded-2xl bg-white p-6 hover:shadow-lg hover:shadow-slate-200/60 hover:-translate-y-0.5 transition-all duration-300 group`}

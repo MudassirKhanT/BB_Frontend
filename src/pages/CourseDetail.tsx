@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { Star, Users, Clock, CheckCircle2, PlayCircle, Lock, ChevronDown, BookOpen, Award, Code2, BarChart3, Globe, Zap, TrendingUp, AlertCircle, ChevronUp, Play } from "lucide-react";
+import {
+  Star, Users, Clock, CheckCircle2, PlayCircle, Lock, ChevronDown,
+  BookOpen, Award, Code2, BarChart3, Globe,
+  Zap, TrendingUp, AlertCircle, ChevronUp, Play,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";

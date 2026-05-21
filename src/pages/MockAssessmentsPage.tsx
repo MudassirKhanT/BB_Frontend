@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import {
@@ -123,7 +123,6 @@ function AdminModal({
 }
 
 export default function MockAssessmentsPage() {
-  const navigate = useNavigate();
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<(typeof BLANK & { _id?: string }) | null>(null);
@@ -165,8 +164,8 @@ export default function MockAssessmentsPage() {
       load();
       setModal(null);
       showToast(form._id ? "Exam updated" : "Exam created");
-    } catch (err: any) {
-      showToast(err.message || "Failed", false);
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : "Failed", false);
     } finally {
       setSaving(false);
     }

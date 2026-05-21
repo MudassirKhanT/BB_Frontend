@@ -6,7 +6,6 @@ import {
   BarChart3, Globe, AlertCircle, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { problemApi } from "@/lib/api";
 
@@ -64,7 +63,7 @@ function FrequencyBars({ frequency }: { frequency: number }) {
 function TopicSection({
   group,
   defaultOpen,
-  courseSlug,
+  courseSlug: _courseSlug,
 }: {
   group: TopicGroup;
   defaultOpen: boolean;
@@ -224,11 +223,11 @@ export default function Practice() {
     setLoading(true);
     problemApi
       .getByCourse(courseSlug)
-      .then((data: any) => {
-        setTopics(data.topics || []);
+      .then((data) => {
+        setTopics((data as { topics: TopicGroup[] }).topics || []);
       })
-      .catch((err: any) => {
-        setError(err.message || "Failed to load problems");
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Failed to load problems");
       })
       .finally(() => setLoading(false));
   }, [courseSlug, navigate]);

@@ -199,7 +199,7 @@ export default function ContestsPage() {
   };
 
   useEffect(() => {
-    contestApi.getAll().then((data: any) => setContests(data)).catch(() => {}).finally(() => setLoading(false));
+    contestApi.getAll().then((data) => setContests(data as Contest[])).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   const filtered = tab === "all" ? contests : contests.filter((c) => c.status === tab);
@@ -208,17 +208,17 @@ export default function ContestsPage() {
     setSaving(true);
     try {
       if (form._id) {
-        const updated: any = await contestApi.update(form._id, form);
-        setContests((p) => p.map((c) => (c._id === form._id ? { ...c, ...updated } : c)));
+        const updated = await contestApi.update(form._id, form);
+        setContests((p) => p.map((c) => (c._id === form._id ? { ...c, ...(updated as Contest) } : c)));
         showToast("Contest updated");
       } else {
-        const created: any = await contestApi.create(form);
-        setContests((p) => [created, ...p]);
+        const created = await contestApi.create(form);
+        setContests((p) => [created as Contest, ...p]);
         showToast("Contest created");
       }
       setModal(null);
-    } catch (err: any) {
-      showToast(err.message || "Failed to save", false);
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : "Failed to save", false);
     } finally {
       setSaving(false);
     }
@@ -230,8 +230,8 @@ export default function ContestsPage() {
       await contestApi.delete(id);
       setContests((p) => p.filter((c) => c._id !== id));
       showToast("Contest deleted");
-    } catch (err: any) {
-      showToast(err.message || "Failed to delete", false);
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : "Failed to delete", false);
     }
   };
 

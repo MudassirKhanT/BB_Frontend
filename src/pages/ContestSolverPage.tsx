@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ReactElement } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { contestApi, compileApi } from "@/lib/api";
-import { ArrowLeft, Play, CheckCircle2, XCircle, Clock, Loader2, RotateCcw, Copy, Check, Terminal, BookOpen, Trophy, ChevronRight, ChevronDown, ChevronUp, Code2, AlertCircle, Send, Undo2, Redo2 } from "lucide-react";
+import { ArrowLeft, Play, CheckCircle2, XCircle, Clock, Loader2, RotateCcw, Copy, Check, Terminal, BookOpen, Trophy, ChevronDown, ChevronUp, Code2, AlertCircle, Send, Undo2, Redo2 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface ContestProblem {
@@ -60,7 +60,7 @@ const DIFF_CLS: Record<string, string> = {
   Hard: "bg-red-100 text-red-700 border-red-200",
 };
 
-const STATUS_CFG: Record<string, { label: string; icon: JSX.Element; cls: string }> = {
+const STATUS_CFG: Record<string, { label: string; icon: ReactElement; cls: string }> = {
   accepted: { label: "Accepted", icon: <CheckCircle2 className="w-4 h-4" />, cls: "text-green-400 bg-green-900/30 border-green-700" },
   wrong_answer: { label: "Wrong Answer", icon: <XCircle className="w-4 h-4" />, cls: "text-red-400 bg-red-900/30 border-red-700" },
   runtime_error: { label: "Runtime Error", icon: <AlertCircle className="w-4 h-4" />, cls: "text-orange-400 bg-orange-900/30 border-orange-700" },
@@ -177,7 +177,7 @@ export default function ContestSolverPage() {
     }
     contestApi
       .getBySlug(slug)
-      .then((data: any) => {
+      .then((data) => {
         setContest(data);
         // Init starter code from current problem
         const cp = (data.problems as ContestProblem[]).find((p) => p.problem.slug === problemSlug);
@@ -304,9 +304,9 @@ export default function ContestSolverPage() {
     setOutputTab("output");
     try {
       const res = await compileApi.run({ language, code: code[language], stdin: customInput });
-      setRunOutput(res as any);
-    } catch (err: any) {
-      setRunOutput({ stdout: "", stderr: err.message || "Failed to run", exitCode: 1 });
+      setRunOutput(res as unknown as { stdout: string; stderr: string; exitCode: number });
+    } catch (err: unknown) {
+      setRunOutput({ stdout: "", stderr: err instanceof Error ? err.message : "Failed to run", exitCode: 1 });
     } finally {
       setRunning(false);
     }
@@ -318,12 +318,12 @@ export default function ContestSolverPage() {
     setSubmitResult(null);
     setOutputTab("submit");
     try {
-      const res: any = await contestApi.submit(slug, problemSlug, { code: code[language], language });
-      setSubmitResult(res);
-    } catch (err: any) {
+      const res = await contestApi.submit(slug, problemSlug, { code: code[language], language });
+      setSubmitResult(res as unknown as SubmitResult);
+    } catch (err: unknown) {
       setSubmitResult(null);
       // Show error in the submit panel
-      setRunOutput({ stdout: "", stderr: err.message || "Submission failed", exitCode: 1 });
+      setRunOutput({ stdout: "", stderr: err instanceof Error ? err.message : "Submission failed", exitCode: 1 });
       setOutputTab("output");
     } finally {
       setSubmitting(false);

@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  Plus, Pencil, Trash2, X, Loader2, Trophy, Eye, EyeOff,
+  Plus, Pencil, Trash2, X, Loader2, Trophy,
   ArrowLeft, ChevronRight, Code2,
 } from "lucide-react";
 import { contestApi, adminProblemApi } from "../../lib/api";
+import {
+  Contest, ContestProblemEntry, Problem, getErrorMessage,
+} from "@/types/models";
 
 const toSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -28,10 +31,33 @@ const fromLocalDT = (local: string) => local ? new Date(local).toISOString() : "
 const BLANK_TC = { input: "", expectedOutput: "", isHidden: false };
 const BLANK_EXAMPLE = { input: "", output: "", explanation: "" };
 
+interface ContestForm {
+  title: string;
+  slug: string;
+  description: string;
+  startTime: string;
+  endTime: string;
+  banner: string;
+  isPublished: boolean;
+}
+
+interface NewProblemForm {
+  title: string;
+  slug: string;
+  difficulty: string;
+  description: string;
+  topicTag: string;
+  examples: { input: string; output: string; explanation: string }[];
+  testCases: { input: string; expectedOutput: string; isHidden: boolean }[];
+  starterCode: Record<string, string>;
+  points: number;
+  isPublished: boolean;
+}
+
 // ── Contest Problems Manager ───────────────────────────────────────────────────
-function ContestProblemsView({ contest, onBack }: { contest: any; onBack: () => void }) {
-  const [contestData, setContestData] = useState<any>(null);
-  const [allProblems, setAllProblems] = useState<any[]>([]);
+function ContestProblemsView({ contest, onBack }: { contest: Contest; onBack: () => void }) {
+  const [contestData, setContestData] = useState<Contest | null>(null);
+  const [allProblems, setAllProblems] = useState<Problem[]>([]);
   const [loading, setLoading] = useState(true);
   const [addMode, setAddMode] = useState<"existing"|"new"|null>(null);
   const [selectedProblemId, setSelectedProblemId] = useState("");
@@ -42,7 +68,7 @@ function ContestProblemsView({ contest, onBack }: { contest: any; onBack: () => 
   const [langTab, setLangTab] = useState("python");
   const LANGS = ["python","javascript","cpp","java"];
 
-  const [newProblem, setNewProblem] = useState({
+  const [newProblem, setNewProblem] = useState<NewProblemForm>({
     title: "", slug: "", difficulty: "Medium", description: "", topicTag: "",
     examples: [{ ...BLANK_EXAMPLE }],
     testCases: [{ ...BLANK_TC }],
@@ -55,7 +81,7 @@ function ContestProblemsView({ contest, onBack }: { contest: any; onBack: () => 
     Promise.all([
       contestApi.getBySlug(contest.slug),
       adminProblemApi.getAll(),
-    ]).then(([cd, ap]: any) => {
+    ]).then(([cd, ap]: [Contest, Problem[]]) => {
       setContestData(cd);
       setAllProblems(Array.isArray(ap) ? ap : []);
       setLoading(false);
@@ -64,8 +90,11 @@ function ContestProblemsView({ contest, onBack }: { contest: any; onBack: () => 
 
   useEffect(() => { load(); }, [load]);
 
-  const contestProblems: any[] = contestData?.problems || [];
-  const usedIds = new Set(contestProblems.map((p: any) => p.problem?._id || p.problem));
+  const contestProblems: ContestProblemEntry[] = contestData?.problems || [];
+  const usedIds = new Set(contestProblems.map((p) => {
+    const prob = p.problem;
+    return typeof prob === "string" ? prob : prob._id;
+  }));
   const availableProblems = allProblems.filter(p => !usedIds.has(p._id));
 
   const handleAddExisting = async (e: React.FormEvent) => {
@@ -74,7 +103,7 @@ function ContestProblemsView({ contest, onBack }: { contest: any; onBack: () => 
     try {
       await contestApi.addProblem(contest._id, { problemId: selectedProblemId, points, order: contestProblems.length + 1 });
       setAddMode(null); setSelectedProblemId(""); setPoints(100); load();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(getErrorMessage(err)); }
     finally { setAdding(false); }
   };
 
@@ -87,19 +116,19 @@ function ContestProblemsView({ contest, onBack }: { contest: any; onBack: () => 
       setAddMode(null);
       setNewProblem({ title:"", slug:"", difficulty:"Medium", description:"", topicTag:"", examples:[{...BLANK_EXAMPLE}], testCases:[{...BLANK_TC}], starterCode:{python:"",javascript:"",cpp:"",java:""}, points:100, isPublished:true });
       load();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(getErrorMessage(err)); }
     finally { setAdding(false); }
   };
 
   const handleRemove = async () => {
     if (!deleteId) return;
     try { await contestApi.removeProblem(contest._id, deleteId); setDeleteId(null); load(); }
-    catch (err: any) { alert(err.message); }
+    catch (err: unknown) { alert(getErrorMessage(err)); }
   };
 
   const setNpEx = (i: number, k: string, v: string) =>
     setNewProblem(p => ({ ...p, examples: p.examples.map((ex, j) => j===i ? { ...ex, [k]: v } : ex) }));
-  const setNpTc = (i: number, k: string, v: any) =>
+  const setNpTc = (i: number, k: string, v: string | boolean) =>
     setNewProblem(p => ({ ...p, testCases: p.testCases.map((tc, j) => j===i ? { ...tc, [k]: v } : tc) }));
 
   if (loading) return <div className="flex items-center justify-center py-20 text-slate-400"><Loader2 className="w-6 h-6 animate-spin mr-2" />Loading…</div>;
@@ -139,19 +168,19 @@ function ContestProblemsView({ contest, onBack }: { contest: any; onBack: () => 
               ))}</tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {contestProblems.map((cp: any, i: number) => {
-                const p = cp.problem || {};
+              {contestProblems.map((cp, i) => {
+                const p = typeof cp.problem === "string" ? ({} as Partial<Problem>) : (cp.problem as Problem);
                 return (
                   <tr key={i} className="hover:bg-slate-50">
                     <td className="px-4 py-3 text-slate-400 font-semibold">{cp.order||i+1}</td>
                     <td className="px-4 py-3 font-bold text-slate-900">{p.title || "—"}</td>
-                    <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-md text-xs font-bold ${DIFF_COLOR[p.difficulty]||""}`}>{p.difficulty}</span></td>
+                    <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-md text-xs font-bold ${DIFF_COLOR[p.difficulty ?? ""]||""}`}>{p.difficulty}</span></td>
                     <td className="px-4 py-3 text-slate-500 text-xs">{p.topicTag}</td>
                     <td className="px-4 py-3 font-semibold text-slate-700">{cp.points}</td>
                     <td className="px-4 py-3 text-slate-600">{(p.testCases||[]).length}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end">
-                        <button onClick={() => setDeleteId(p._id||cp._id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => setDeleteId(p._id ?? "")} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     </td>
                   </tr>
@@ -296,7 +325,7 @@ function ContestProblemsView({ contest, onBack }: { contest: any; onBack: () => 
                   ))}
                 </div>
                 <textarea
-                  value={(newProblem.starterCode as any)[langTab] || ""}
+                  value={(newProblem.starterCode as Record<string, string>)[langTab] || ""}
                   onChange={e => setNewProblem(p => ({ ...p, starterCode: { ...p.starterCode, [langTab]: e.target.value } }))}
                   rows={6} placeholder={`# ${langTab} starter code`} className={inp + " font-mono text-xs"} />
               </div>
@@ -330,26 +359,29 @@ function ContestProblemsView({ contest, onBack }: { contest: any; onBack: () => 
 }
 
 // ── Main ContestPanel ──────────────────────────────────────────────────────────
-const BLANK_CONTEST = {
+const BLANK_CONTEST: ContestForm = {
   title: "", slug: "", description: "", startTime: "", endTime: "", banner: BANNERS[0], isPublished: false,
 };
 
 export default function ContestPanel() {
-  const [items, setItems]       = useState<any[]>([]);
+  const [items, setItems]       = useState<Contest[]>([]);
   const [loading, setLoading]   = useState(true);
   const [showModal, setShow]    = useState(false);
-  const [editItem, setEdit]     = useState<any>(null);
-  const [form, setForm]         = useState({ ...BLANK_CONTEST });
+  const [editItem, setEdit]     = useState<Contest | null>(null);
+  const [form, setForm]         = useState<ContestForm>({ ...BLANK_CONTEST });
   const [saving, setSaving]     = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [error, setError]       = useState("");
-  const [activeContest, setActiveContest] = useState<any | null>(null);
+  const [activeContest, setActiveContest] = useState<Contest | null>(null);
 
-  const load = () => contestApi.getAll().then((d: any) => { setItems(Array.isArray(d) ? d : d.contests ?? []); setLoading(false); });
+  const load = () => contestApi.getAll().then((d: { contests?: Contest[] } | Contest[]) => {
+    setItems(Array.isArray(d) ? d : (d as { contests?: Contest[] }).contests ?? []);
+    setLoading(false);
+  });
   useEffect(() => { load(); }, []);
 
   const openCreate = () => { setEdit(null); setForm({ ...BLANK_CONTEST }); setError(""); setShow(true); };
-  const openEdit   = (item: any) => {
+  const openEdit   = (item: Contest) => {
     setEdit(item);
     setForm({ title: item.title, slug: item.slug, description: item.description||"",
       startTime: toLocalDT(item.startTime), endTime: toLocalDT(item.endTime),
@@ -364,17 +396,17 @@ export default function ContestPanel() {
       if (editItem) await contestApi.update(editItem._id, payload);
       else await contestApi.create(payload);
       setShow(false); await load();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(getErrorMessage(err)); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     try { await contestApi.delete(deleteId); setDeleteId(null); await load(); }
-    catch (err: any) { alert(err.message); }
+    catch (err: unknown) { alert(getErrorMessage(err)); }
   };
 
-  const getStatus = (item: any) => {
+  const getStatus = (item: Contest) => {
     const now = Date.now();
     const start = new Date(item.startTime).getTime();
     const end   = new Date(item.endTime).getTime();

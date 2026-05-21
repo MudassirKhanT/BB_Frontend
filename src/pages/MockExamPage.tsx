@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { Navbar } from "@/components/shared/navbar";
 import {
   Clock, CheckCircle2, XCircle, AlertCircle, Loader2,
-  ChevronLeft, ChevronRight, Send, BookOpen, BarChart3,
+  Send, BookOpen, BarChart3,
   ArrowLeft, Trophy,
 } from "lucide-react";
 
@@ -279,8 +279,8 @@ export default function MockExamPage() {
       if (!res.ok) throw new Error(data.message);
       setResult(data);
       setView("result");
-    } catch (err: any) {
-      alert(err.message || "Submission failed");
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Submission failed");
     } finally {
       setSubmitting(false);
     }

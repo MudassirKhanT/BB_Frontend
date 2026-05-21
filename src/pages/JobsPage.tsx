@@ -291,8 +291,8 @@ export default function JobsPage() {
     try {
       const fetched = await fetchJSearch(kw, cat);
       setJobs(fetched);
-    } catch (e: any) {
-      setError(e.message || "Failed to load jobs. Please try again.");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to fetch jobs");
       setJobs([]);
     } finally {
       setLoading(false);

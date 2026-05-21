@@ -26,6 +26,7 @@ interface PrepQuestion {
   difficulty: "Easy" | "Medium" | "Hard";
   tags: string[];
   order: number;
+  isPublished?: boolean;
 }
 
 interface PrepData {
@@ -403,8 +404,8 @@ function AdminQuestionForm({ category, companyId, editTarget, onSaved, onCancel 
         saved = await companyApi.createQuestion(companyId, payload);
       }
       onSaved(saved);
-    } catch (err: any) {
-      setError(err.message || "Failed to save question.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to save question.");
     } finally {
       setSaving(false);
     }
@@ -825,8 +826,8 @@ export default function CompanyPreparationPage() {
         const cat = activeTab as keyof QuestionData;
         return { ...prev, [cat]: (prev[cat] || []).filter((q) => q._id !== qId) };
       });
-    } catch (err: any) {
-      alert(err.message || "Failed to delete question.");
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to delete question.");
     }
   };
 

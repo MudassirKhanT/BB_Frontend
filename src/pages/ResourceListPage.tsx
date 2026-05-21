@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { resourceApi } from "@/lib/api";
+import type { ResourceDifficulty } from "@/types/models";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Resource {
@@ -28,6 +29,7 @@ interface Resource {
   company: string;
   fileUrl: string;
   videoUrl: string;
+  content?: string;
   isPublished: boolean;
   createdAt: string;
 }
@@ -127,8 +129,8 @@ function AdminResourceForm({ typeConfig, apiType, existing, onSave, onClose }: A
         saved = await resourceApi.create(payload);
       }
       onSave(saved);
-    } catch (err: any) {
-      setError(err.message || "Failed to save");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to save");
     }
     setSaving(false);
   };
@@ -163,7 +165,7 @@ function AdminResourceForm({ typeConfig, apiType, existing, onSave, onClose }: A
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">Difficulty</label>
-              <select value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value as any })}
+              <select value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value as ResourceDifficulty })}
                 className={inputCls}>
                 <option>Beginner</option>
                 <option>Intermediate</option>
@@ -329,7 +331,7 @@ export default function ResourceListPage() {
     setLoading(true);
     resourceApi.getAll({ type: config.apiType })
       .then((data: Resource[]) => setResources(data))
-      .catch((err: any) => setError(err.message || "Failed to load"))
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Failed to load"))
       .finally(() => setLoading(false));
   }, [typeSlug]);
 
@@ -362,8 +364,8 @@ export default function ResourceListPage() {
     try {
       await resourceApi.delete(id);
       setResources((prev) => prev.filter((r) => r._id !== id));
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "An error occurred");
     }
   };
 

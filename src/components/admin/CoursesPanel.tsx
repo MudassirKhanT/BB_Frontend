@@ -5,6 +5,7 @@ import {
   AlertCircle, CheckCircle2, Info, List, Minus,
 } from "lucide-react";
 import { courseApi } from "../../lib/api";
+import type { Course, Topic, Subtopic, ContentBlock } from "@/types/models";
 
 const toSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -28,7 +29,18 @@ const BLOCK_TYPES = [
 
 type BlockType = typeof BLOCK_TYPES[number];
 
-function emptyBlock(type: BlockType): any {
+interface SubtopicForm {
+  title: string;
+  slug: string;
+  order: number;
+  estimatedReadTime: number;
+  isFreePreview: boolean;
+  videoUrl: string;
+  summary: string;
+  content: ContentBlock[];
+}
+
+function emptyBlock(type: BlockType): ContentBlock {
   switch (type) {
     case "heading":   return { type, data: { level: 2, text: "" } };
     case "paragraph": return { type, data: { text: "" } };
@@ -57,7 +69,7 @@ const F = ({ label, children }: { label: string; children: React.ReactNode }) =>
 );
 
 // ─── Block Editor ──────────────────────────────────────────────────────────────
-function BlockEditor({ block, onChange, onRemove }: { block: any; onChange: (b: any) => void; onRemove: () => void }) {
+function BlockEditor({ block, onChange, onRemove }: { block: ContentBlock; onChange: (b: ContentBlock) => void; onRemove: () => void }) {
   const d = block.data || {};
   const set = (partial: object) => onChange({ ...block, data: { ...d, ...partial } });
 
@@ -81,91 +93,91 @@ function BlockEditor({ block, onChange, onRemove }: { block: any; onChange: (b: 
 
       {block.type === "heading" && (
         <div className="grid grid-cols-4 gap-2">
-          <select value={d.level || 2} onChange={e => set({ level: Number(e.target.value) })}
+          <select value={(d.level as number) || 2} onChange={e => set({ level: Number(e.target.value) })}
             className={inp + " col-span-1"}>
             {[1,2,3,4].map(l => <option key={l} value={l}>H{l}</option>)}
           </select>
-          <input value={d.text || ""} onChange={e => set({ text: e.target.value })}
+          <input value={(d.text as string) || ""} onChange={e => set({ text: e.target.value })}
             placeholder="Heading text" className={inp + " col-span-3"} />
         </div>
       )}
       {block.type === "paragraph" && (
-        <textarea value={d.text || ""} onChange={e => set({ text: e.target.value })}
+        <textarea value={(d.text as string) || ""} onChange={e => set({ text: e.target.value })}
           placeholder="Paragraph text…" rows={3} className={inp} />
       )}
       {block.type === "code" && (
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2">
-            <input value={d.language || ""} onChange={e => set({ language: e.target.value })}
+            <input value={(d.language as string) || ""} onChange={e => set({ language: e.target.value })}
               placeholder="Language (e.g. javascript)" className={inp} />
-            <input value={d.title || ""} onChange={e => set({ title: e.target.value })}
+            <input value={(d.title as string) || ""} onChange={e => set({ title: e.target.value })}
               placeholder="Code block title" className={inp} />
           </div>
-          <textarea value={d.code || ""} onChange={e => set({ code: e.target.value })}
+          <textarea value={(d.code as string) || ""} onChange={e => set({ code: e.target.value })}
             placeholder="// paste code here" rows={6} className={inp + " font-mono text-xs"} />
         </div>
       )}
       {["info","tip","warning","success"].includes(block.type) && (
         <div className="space-y-2">
-          <input value={d.title || ""} onChange={e => set({ title: e.target.value })}
+          <input value={(d.title as string) || ""} onChange={e => set({ title: e.target.value })}
             placeholder="Title (optional)" className={inp} />
-          <textarea value={d.text || ""} onChange={e => set({ text: e.target.value })}
+          <textarea value={(d.text as string) || ""} onChange={e => set({ text: e.target.value })}
             placeholder="Content text…" rows={2} className={inp} />
         </div>
       )}
       {block.type === "keyPoints" && (
         <div className="space-y-2">
-          <input value={d.title || ""} onChange={e => set({ title: e.target.value })}
+          <input value={(d.title as string) || ""} onChange={e => set({ title: e.target.value })}
             placeholder="Section title (optional)" className={inp} />
-          {(d.points || [""]).map((p: string, i: number) => (
+          {((d.points as string[]) || [""]).map((p: string, i: number) => (
             <div key={i} className="flex gap-2">
-              <input value={p} onChange={e => { const pts = [...(d.points || [])]; pts[i] = e.target.value; set({ points: pts }); }}
+              <input value={p} onChange={e => { const pts = [...((d.points as string[]) || [])]; pts[i] = e.target.value; set({ points: pts }); }}
                 placeholder={`Point ${i + 1}`} className={inp} />
-              <button type="button" onClick={() => { const pts = (d.points || []).filter((_: any, j: number) => j !== i); set({ points: pts.length ? pts : [""] }); }}
+              <button type="button" onClick={() => { const pts = ((d.points as string[]) || []).filter((_, j: number) => j !== i); set({ points: pts.length ? pts : [""] }); }}
                 className="p-2 text-slate-400 hover:text-red-500"><X className="w-3 h-3" /></button>
             </div>
           ))}
-          <button type="button" onClick={() => set({ points: [...(d.points || []), ""] })}
+          <button type="button" onClick={() => set({ points: [...((d.points as string[]) || []), ""] })}
             className="text-xs font-semibold text-primary hover:underline">+ Add point</button>
         </div>
       )}
       {block.type === "list" && (
         <div className="space-y-2">
-          <select value={d.style || "unordered"} onChange={e => set({ style: e.target.value })}
+          <select value={(d.style as string) || "unordered"} onChange={e => set({ style: e.target.value })}
             className={inp}><option value="unordered">Unordered</option><option value="ordered">Ordered</option></select>
-          {(d.items || [""]).map((item: string, i: number) => (
+          {((d.items as string[]) || [""]).map((item: string, i: number) => (
             <div key={i} className="flex gap-2">
-              <input value={item} onChange={e => { const it = [...(d.items || [])]; it[i] = e.target.value; set({ items: it }); }}
+              <input value={item} onChange={e => { const it = [...((d.items as string[]) || [])]; it[i] = e.target.value; set({ items: it }); }}
                 placeholder={`Item ${i + 1}`} className={inp} />
-              <button type="button" onClick={() => { const it = (d.items || []).filter((_: any, j: number) => j !== i); set({ items: it.length ? it : [""] }); }}
+              <button type="button" onClick={() => { const it = ((d.items as string[]) || []).filter((_, j: number) => j !== i); set({ items: it.length ? it : [""] }); }}
                 className="p-2 text-slate-400 hover:text-red-500"><X className="w-3 h-3" /></button>
             </div>
           ))}
-          <button type="button" onClick={() => set({ items: [...(d.items || []), ""] })}
+          <button type="button" onClick={() => set({ items: [...((d.items as string[]) || []), ""] })}
             className="text-xs font-semibold text-primary hover:underline">+ Add item</button>
         </div>
       )}
       {block.type === "table" && (
         <div className="space-y-2">
           <div className="flex gap-2">
-            {(d.headers || ["Col1"]).map((h: string, i: number) => (
-              <input key={i} value={h} onChange={e => { const hd = [...(d.headers || [])]; hd[i] = e.target.value; set({ headers: hd }); }}
+            {((d.headers as string[]) || ["Col1"]).map((h: string, i: number) => (
+              <input key={i} value={h} onChange={e => { const hd = [...((d.headers as string[]) || [])]; hd[i] = e.target.value; set({ headers: hd }); }}
                 placeholder={`Header ${i+1}`} className={inp} />
             ))}
-            <button type="button" onClick={() => { set({ headers: [...(d.headers||[]),"NewCol"], rows: (d.rows||[]).map((r:string[]) => [...r,""]) }); }}
+            <button type="button" onClick={() => { set({ headers: [...((d.headers as string[])||[]),"NewCol"], rows: ((d.rows as string[][])||[]).map((r:string[]) => [...r,""]) }); }}
               className="px-2 text-xs text-primary font-semibold whitespace-nowrap">+ Col</button>
           </div>
-          {(d.rows || [[""]]).map((row: string[], ri: number) => (
+          {((d.rows as string[][]) || [[""]]).map((row: string[], ri: number) => (
             <div key={ri} className="flex gap-2">
               {row.map((cell: string, ci: number) => (
-                <input key={ci} value={cell} onChange={e => { const rows = d.rows.map((r:string[],rj:number) => rj===ri ? r.map((c:string,cj:number) => cj===ci ? e.target.value : c) : r); set({ rows }); }}
+                <input key={ci} value={cell} onChange={e => { const rows = (d.rows as string[][]).map((r:string[],rj:number) => rj===ri ? r.map((c:string,cj:number) => cj===ci ? e.target.value : c) : r); set({ rows }); }}
                   placeholder={`R${ri+1}C${ci+1}`} className={inp} />
               ))}
-              <button type="button" onClick={() => set({ rows: (d.rows||[]).filter((_:any,j:number)=>j!==ri) })}
+              <button type="button" onClick={() => set({ rows: ((d.rows as string[][])||[]).filter((_,j:number)=>j!==ri) })}
                 className="p-1 text-slate-400 hover:text-red-500"><X className="w-3 h-3" /></button>
             </div>
           ))}
-          <button type="button" onClick={() => set({ rows: [...(d.rows||[]), new Array((d.headers||[]).length).fill("")] })}
+          <button type="button" onClick={() => set({ rows: [...((d.rows as string[][])||[]), new Array(((d.headers as string[])||[]).length).fill("")] })}
             className="text-xs font-semibold text-primary hover:underline">+ Add row</button>
         </div>
       )}
@@ -178,9 +190,9 @@ function BlockEditor({ block, onChange, onRemove }: { block: any; onChange: (b: 
 
 // ─── Subtopic Editor ───────────────────────────────────────────────────────────
 function SubtopicEditor({ topicId, subtopic, onSaved, onCancel }: {
-  topicId: string; subtopic: any | null; onSaved: () => void; onCancel: () => void;
+  topicId: string; subtopic: Subtopic | null; onSaved: () => void; onCancel: () => void;
 }) {
-  const [form, setForm] = useState<any>({
+  const [form, setForm] = useState<SubtopicForm>({
     title: "", slug: "", order: 0, isFreePreview: false,
     videoUrl: "", summary: "", content: [],
     estimatedReadTime: 5,
@@ -192,7 +204,7 @@ function SubtopicEditor({ topicId, subtopic, onSaved, onCancel }: {
   useEffect(() => {
     if (subtopic) {
       setLoadingContent(true);
-      courseApi.getSubtopicById(subtopic._id).then((d: any) => {
+      courseApi.getSubtopicById(subtopic._id).then((d: Subtopic) => {
         setForm({
           title: d.title || "",
           slug: d.slug || "",
@@ -210,9 +222,9 @@ function SubtopicEditor({ topicId, subtopic, onSaved, onCancel }: {
     }
   }, [subtopic]);
 
-  const addBlock = (type: BlockType) => setForm((f: any) => ({ ...f, content: [...f.content, emptyBlock(type)] }));
-  const updateBlock = (i: number, b: any) => setForm((f: any) => ({ ...f, content: f.content.map((c: any, j: number) => j === i ? b : c) }));
-  const removeBlock = (i: number) => setForm((f: any) => ({ ...f, content: f.content.filter((_: any, j: number) => j !== i) }));
+  const addBlock = (type: BlockType) => setForm(f => ({ ...f, content: [...f.content, emptyBlock(type)] }));
+  const updateBlock = (i: number, b: ContentBlock) => setForm(f => ({ ...f, content: f.content.map((c, j) => j === i ? b : c) }));
+  const removeBlock = (i: number) => setForm(f => ({ ...f, content: f.content.filter((_, j) => j !== i) }));
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true); setError("");
@@ -221,7 +233,7 @@ function SubtopicEditor({ topicId, subtopic, onSaved, onCancel }: {
       if (subtopic) await courseApi.updateSubtopic(subtopic._id, payload);
       else await courseApi.createSubtopic(payload);
       onSaved();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : "An error occurred"); }
     finally { setSaving(false); }
   };
 
@@ -250,35 +262,35 @@ function SubtopicEditor({ topicId, subtopic, onSaved, onCancel }: {
         <div className="grid grid-cols-2 gap-4">
           <F label="Title *">
             <input className={inp} value={form.title} required
-              onChange={e => setForm((f: any) => ({ ...f, title: e.target.value, slug: subtopic ? f.slug : toSlug(e.target.value) }))} />
+              onChange={e => setForm(f => ({ ...f, title: e.target.value, slug: subtopic ? f.slug : toSlug(e.target.value) }))} />
           </F>
           <F label="Slug *">
-            <input className={inp} value={form.slug} required onChange={e => setForm((f: any) => ({ ...f, slug: e.target.value }))} />
+            <input className={inp} value={form.slug} required onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} />
           </F>
         </div>
         <div className="grid grid-cols-3 gap-4">
           <F label="Order">
-            <input type="number" className={inp} value={form.order} onChange={e => setForm((f: any) => ({ ...f, order: Number(e.target.value) }))} />
+            <input type="number" className={inp} value={form.order} onChange={e => setForm(f => ({ ...f, order: Number(e.target.value) }))} />
           </F>
           <F label="Read Time (min)">
             <input type="number" className={inp} value={form.estimatedReadTime} min={1}
-              onChange={e => setForm((f: any) => ({ ...f, estimatedReadTime: Number(e.target.value) }))} />
+              onChange={e => setForm(f => ({ ...f, estimatedReadTime: Number(e.target.value) }))} />
           </F>
           <div className="flex items-end pb-2 gap-2">
             <input type="checkbox" id="fp" checked={form.isFreePreview}
-              onChange={e => setForm((f: any) => ({ ...f, isFreePreview: e.target.checked }))} className="rounded" />
+              onChange={e => setForm(f => ({ ...f, isFreePreview: e.target.checked }))} className="rounded" />
             <label htmlFor="fp" className="text-sm font-semibold text-slate-700">Free Preview</label>
           </div>
         </div>
         <F label="Video URL">
           <div className="flex items-center gap-2">
             <Video className="w-4 h-4 text-slate-400 flex-shrink-0" />
-            <input className={inp} value={form.videoUrl} placeholder="https://youtube.com/..." onChange={e => setForm((f: any) => ({ ...f, videoUrl: e.target.value }))} />
+            <input className={inp} value={form.videoUrl} placeholder="https://youtube.com/..." onChange={e => setForm(f => ({ ...f, videoUrl: e.target.value }))} />
           </div>
         </F>
         <F label="Summary">
           <textarea className={inp} rows={2} value={form.summary} placeholder="Brief summary of this lesson…"
-            onChange={e => setForm((f: any) => ({ ...f, summary: e.target.value }))} />
+            onChange={e => setForm(f => ({ ...f, summary: e.target.value }))} />
         </F>
       </div>
 
@@ -297,7 +309,7 @@ function SubtopicEditor({ topicId, subtopic, onSaved, onCancel }: {
         )}
 
         <div className="space-y-2">
-          {form.content.map((block: any, i: number) => (
+          {form.content.map((block, i) => (
             <BlockEditor key={i} block={block}
               onChange={(b) => updateBlock(i, b)}
               onRemove={() => removeBlock(i)} />
@@ -327,15 +339,15 @@ function SubtopicEditor({ topicId, subtopic, onSaved, onCancel }: {
 }
 
 // ─── Subtopics List ────────────────────────────────────────────────────────────
-function SubtopicsView({ topic, onBack }: { topic: any; onBack: () => void }) {
-  const [subtopics, setSubtopics] = useState<any[]>([]);
+function SubtopicsView({ topic, onBack }: { topic: Topic; onBack: () => void }) {
+  const [subtopics, setSubtopics] = useState<Subtopic[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState<any | null>(undefined);
+  const [editing, setEditing] = useState<Subtopic | null | undefined>(undefined);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
-    courseApi.getSubtopics(topic._id).then((d: any) => {
+    courseApi.getSubtopics(topic._id).then((d: Subtopic[]) => {
       setSubtopics(Array.isArray(d) ? d : []);
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -346,7 +358,7 @@ function SubtopicsView({ topic, onBack }: { topic: any; onBack: () => void }) {
   const handleDelete = async () => {
     if (!deleteId) return;
     try { await courseApi.deleteSubtopic(deleteId); setDeleteId(null); load(); }
-    catch (err: any) { alert(err.message); }
+    catch (err: unknown) { alert(err instanceof Error ? err.message : "An error occurred"); }
   };
 
   if (editing !== undefined) {
@@ -433,19 +445,19 @@ function SubtopicsView({ topic, onBack }: { topic: any; onBack: () => void }) {
 }
 
 // ─── Topics View ───────────────────────────────────────────────────────────────
-function TopicsView({ course, onBack }: { course: any; onBack: () => void }) {
-  const [topics, setTopics] = useState<any[]>([]);
+function TopicsView({ course, onBack }: { course: Course; onBack: () => void }) {
+  const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShow] = useState(false);
-  const [editItem, setEdit] = useState<any>(null);
+  const [editItem, setEdit] = useState<Topic | null>(null);
   const [form, setForm] = useState({ title: "", order: 0 });
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [activeTopic, setActiveTopic] = useState<any | null>(null);
+  const [activeTopic, setActiveTopic] = useState<Topic | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
-    courseApi.getTopics(course.slug).then((d: any) => {
+    courseApi.getTopics(course.slug).then((d: Topic[]) => {
       setTopics(Array.isArray(d) ? d : []);
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -454,7 +466,7 @@ function TopicsView({ course, onBack }: { course: any; onBack: () => void }) {
   useEffect(() => { load(); }, [load]);
 
   const openCreate = () => { setEdit(null); setForm({ title: "", order: topics.length }); setShow(true); };
-  const openEdit = (t: any) => { setEdit(t); setForm({ title: t.title, order: t.order }); setShow(true); };
+  const openEdit = (t: Topic) => { setEdit(t); setForm({ title: t.title, order: t.order }); setShow(true); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
@@ -462,14 +474,14 @@ function TopicsView({ course, onBack }: { course: any; onBack: () => void }) {
       if (editItem) await courseApi.updateTopic(editItem._id, form);
       else await courseApi.createTopic({ ...form, course: course._id });
       setShow(false); load();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: unknown) { alert(err instanceof Error ? err.message : "An error occurred"); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     try { await courseApi.deleteTopic(deleteId); setDeleteId(null); load(); }
-    catch (err: any) { alert(err.message); }
+    catch (err: unknown) { alert(err instanceof Error ? err.message : "An error occurred"); }
   };
 
   if (activeTopic) return <SubtopicsView topic={activeTopic} onBack={() => setActiveTopic(null)} />;
@@ -516,9 +528,8 @@ function TopicsView({ course, onBack }: { course: any; onBack: () => void }) {
                     <button onClick={() => setActiveTopic(t)} className="flex items-center gap-2 font-bold text-slate-900 hover:text-primary transition-colors">
                       {t.title} <ChevronRight className="w-4 h-4" />
                     </button>
-                    <p className="text-xs text-slate-400">{(t.subtopics || []).length} lessons</p>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{(t.subtopics || []).length}</td>
+                  <td className="px-4 py-3 text-slate-600">—</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1.5">
                       <button onClick={() => openEdit(t)} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"><Pencil className="w-3.5 h-3.5" /></button>
@@ -575,21 +586,21 @@ function TopicsView({ course, onBack }: { course: any; onBack: () => void }) {
 
 // ─── Main CoursesPanel ─────────────────────────────────────────────────────────
 export default function CoursesPanel() {
-  const [items, setItems]       = useState<any[]>([]);
+  const [items, setItems]       = useState<Course[]>([]);
   const [loading, setLoading]   = useState(true);
   const [showModal, setShow]    = useState(false);
-  const [editItem, setEdit]     = useState<any>(null);
+  const [editItem, setEdit]     = useState<Course | null>(null);
   const [form, setForm]         = useState({ ...COURSE_BLANK });
   const [saving, setSaving]     = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [error, setError]       = useState("");
-  const [activeCourse, setActiveCourse] = useState<any | null>(null);
+  const [activeCourse, setActiveCourse] = useState<Course | null>(null);
 
-  const load = () => courseApi.getAllAdmin().then((d: any) => { setItems(Array.isArray(d) ? d : d.courses ?? []); setLoading(false); });
+  const load = () => courseApi.getAllAdmin().then((d: { courses?: Course[] } | Course[]) => { setItems(Array.isArray(d) ? d : (d as { courses?: Course[] }).courses ?? []); setLoading(false); });
   useEffect(() => { load(); }, []);
 
   const openCreate = () => { setEdit(null); setForm({ ...COURSE_BLANK }); setError(""); setShow(true); };
-  const openEdit   = (item: any) => {
+  const openEdit   = (item: Course) => {
     setEdit(item);
     setForm({
       title: item.title, slug: item.slug, description: item.description,
@@ -615,22 +626,22 @@ export default function CoursesPanel() {
       if (editItem) await courseApi.update(editItem._id, payload);
       else await courseApi.create(payload);
       setShow(false); await load();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : "An error occurred"); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     try { await courseApi.delete(deleteId); setDeleteId(null); await load(); }
-    catch (err: any) { alert(err.message); }
+    catch (err: unknown) { alert(err instanceof Error ? err.message : "An error occurred"); }
   };
 
-  const togglePublish = async (item: any) => {
+  const togglePublish = async (item: Course) => {
     try {
       if (item.isPublished) await courseApi.update(item._id, { isPublished: false });
       else await courseApi.publish(item._id);
       await load();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: unknown) { alert(err instanceof Error ? err.message : "An error occurred"); }
   };
 
   if (activeCourse) return <TopicsView course={activeCourse} onBack={() => setActiveCourse(null)} />;

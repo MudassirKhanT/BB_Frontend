@@ -5,7 +5,7 @@ import {
   BookOpen, Clock, ArrowLeft, Menu, X, Bookmark,
   FileText, Check, Trophy, Code2, BarChart3, Globe, Zap, TrendingUp,
   Award, AlertTriangle, Info, Lightbulb, List, HelpCircle,
-  Flame, Play, RefreshCw, Download, GraduationCap,
+  Flame, Play, RefreshCw, Download, GraduationCap, Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,14 +43,28 @@ interface Enrollment {
   notes: { subtopicId: string; content: string; _id: string }[];
 }
 
+interface ToastMessage {
+  id: number;
+  message: string;
+}
+
+/** Minimum seconds a student must spend on a lesson before they can proceed. */
+const MIN_READ_SECONDS = 300; // 5 minutes
+
 // ─── Icon map ─────────────────────────────────────────────────────────
 const ICON_MAP: Record<string, React.ElementType> = {
   Code2, BarChart3, Globe, Zap, BookOpen, TrendingUp, Award,
 };
 
 // ─── Content Renderer ─────────────────────────────────────────────────
-function ContentRenderer({ blocks }: { blocks: ContentBlock[] }) {
-  const [quizAnswers, setQuizAnswers] = useState<Record<number, number | null>>({});
+interface ContentRendererProps {
+  blocks: ContentBlock[];
+  /** Keyed by block index → selected option index (null = not yet answered). Owned by parent. */
+  quizAnswers: Record<number, number | null>;
+  onQuizAnswer: (blockIdx: number, optionIdx: number | null) => void;
+}
+
+function ContentRenderer({ blocks, quizAnswers, onQuizAnswer }: ContentRendererProps) {
   const [runOutputs, setRunOutputs] = useState<Record<number, { text: string; isError: boolean; loading: boolean }>>({});
 
   const runCode = async (idx: number, code: string, language: string) => {
@@ -62,8 +76,8 @@ function ContentRenderer({ blocks }: { blocks: ContentBlock[] }) {
         ? (result.stderr || "Runtime error")
         : (result.stdout || "(no output)");
       setRunOutputs((prev) => ({ ...prev, [idx]: { text: out, isError: hasError, loading: false } }));
-    } catch (err: any) {
-      setRunOutputs((prev) => ({ ...prev, [idx]: { text: err.message || "Run failed", isError: true, loading: false } }));
+    } catch (err: unknown) {
+      setRunOutputs((prev) => ({ ...prev, [idx]: { text: err instanceof Error ? err.message : "Run failed", isError: true, loading: false } }));
     }
   };
 
@@ -330,7 +344,7 @@ function ContentRenderer({ blocks }: { blocks: ContentBlock[] }) {
                       <button
                         key={oi}
                         disabled={submitted}
-                        onClick={() => setQuizAnswers((prev) => ({ ...prev, [idx]: oi }))}
+                        onClick={() => onQuizAnswer(idx, oi)}
                         className={`w-full flex items-center gap-3 p-3.5 rounded-xl border-2 text-left text-sm transition-all ${cls}`}
                       >
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 flex-shrink-0 ${
@@ -352,7 +366,7 @@ function ContentRenderer({ blocks }: { blocks: ContentBlock[] }) {
                     </div>
                     <p className="leading-relaxed">{d.explanation}</p>
                     {!isCorrect && (
-                      <button onClick={() => setQuizAnswers((prev) => ({ ...prev, [idx]: null }))} className="mt-2 flex items-center gap-1 text-xs text-red-600 font-semibold hover:underline">
+                      <button onClick={() => onQuizAnswer(idx, null)} className="mt-2 flex items-center gap-1 text-xs text-red-600 font-semibold hover:underline">
                         <RefreshCw className="w-3 h-3" /> Try again
                       </button>
                     )}
@@ -494,6 +508,16 @@ export default function CourseLearn() {
   const [courseColor, setCourseColor] = useState("from-blue-500 to-cyan-500");
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // ── Lesson-gating state ───────────────────────────────────────────────
+  /** Seconds the student has spent on the current subtopic in this session. */
+  const [timeSpent, setTimeSpent] = useState(0);
+  /** Quiz answers for the current subtopic — lifted from ContentRenderer. */
+  const [quizAnswers, setQuizAnswers] = useState<Record<number, number | null>>({});
+  /** Active toast notifications. */
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const timerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const toastIdRef = useRef(0);
+
   const allSubtopics = curriculum.flatMap((c) => c.subtopics);
   const currentIdx = allSubtopics.findIndex((s) => s._id === currentSubtopic?._id);
   const prevSubtopic = currentIdx > 0 ? allSubtopics[currentIdx - 1] : null;
@@ -502,6 +526,12 @@ export default function CourseLearn() {
   const isCurrentDone = currentSubtopic ? completedIds.has(currentSubtopic._id) : false;
 
   const loadSubtopic = useCallback(async (id: string) => {
+    // Reset per-lesson gates whenever a new lesson is loaded
+    setTimeSpent(0);
+    setQuizAnswers({});
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => setTimeSpent((s) => s + 1), 1000);
+
     setLessonLoading(true);
     try {
       const data = await courseApi.getSubtopic(id);
@@ -571,8 +601,38 @@ export default function CourseLearn() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
+  // Clear interval on unmount
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
+
+  // ── Lesson-gate helpers ───────────────────────────────────────────────
+  const quizCount      = currentSubtopic?.content?.filter((b) => b.type === "quiz").length ?? 0;
+  const answeredCount  = Object.values(quizAnswers).filter((v) => v !== null).length;
+  const allQuizzesDone = answeredCount >= quizCount;
+  /** Time gate is bypassed for lessons the student already completed. */
+  const hasReadEnough  = isCurrentDone || timeSpent >= MIN_READ_SECONDS;
+  const canProceed     = hasReadEnough && allQuizzesDone;
+
+  const showToast = useCallback((message: string) => {
+    const id = ++toastIdRef.current;
+    setToasts((prev) => [...prev, { id, message }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4500);
+  }, []);
+
   const handleMarkComplete = async () => {
     if (!currentSubtopic || !slug || isCurrentDone) return;
+
+    // Time gate
+    if (timeSpent < MIN_READ_SECONDS) {
+      const remaining = Math.ceil((MIN_READ_SECONDS - timeSpent) / 60);
+      showToast(`⏱ Spend at least 5 minutes on this lesson. ${remaining} min${remaining !== 1 ? "s" : ""} remaining.`);
+      return;
+    }
+    // Quiz gate
+    if (quizCount > 0 && !allQuizzesDone) {
+      showToast(`📝 Complete all quizzes (${answeredCount}/${quizCount} done) before marking this lesson complete.`);
+      return;
+    }
+
     setCompleting(true);
     try {
       const result = await enrollmentApi.markComplete(slug, currentSubtopic._id);
@@ -586,6 +646,23 @@ export default function CourseLearn() {
       }
     } catch {}
     setCompleting(false);
+  };
+
+  const handleNext = () => {
+    if (!nextSubtopic) return;
+    // Already-completed lessons bypass the gate
+    if (!isCurrentDone) {
+      if (timeSpent < MIN_READ_SECONDS) {
+        const remaining = Math.ceil((MIN_READ_SECONDS - timeSpent) / 60);
+        showToast(`⏱ Spend at least 5 minutes on this lesson. ${remaining} min${remaining !== 1 ? "s" : ""} left.`);
+        return;
+      }
+      if (quizCount > 0 && !allQuizzesDone) {
+        showToast(`📝 Complete all ${quizCount} quiz${quizCount !== 1 ? "zes" : ""} before moving on (${answeredCount}/${quizCount} done).`);
+        return;
+      }
+    }
+    loadSubtopic(nextSubtopic._id);
   };
 
   const handleBookmark = async () => {
@@ -604,12 +681,24 @@ export default function CourseLearn() {
   // ── Certificate Generation ────────────────────────────────────────────────
   const [certDownloading, setCertDownloading] = useState(false);
 
+  interface Canvas2DWithLetterSpacing extends CanvasRenderingContext2D {
+    letterSpacing: string;
+  }
+
   const downloadCertificate = async () => {
     setCertDownloading(true);
     try {
-      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      const QRCode = (await import("qrcode")).default;
+
+      const storedUser = JSON.parse(localStorage.getItem("user") || "{}") as {
+        name?: string; username?: string; email?: string; _id?: string;
+      };
       const studentName = storedUser?.name || storedUser?.username || storedUser?.email?.split("@")[0] || "Student";
       const issueDate = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+      // Unique certificate ID — deterministic hash of userId + courseSlug + date
+      const rawId = `${storedUser?._id || studentName}-${slug}-${new Date().toISOString().slice(0, 10)}`;
+      const certId = btoa(rawId).replace(/[^a-zA-Z0-9]/g, "").slice(0, 20).toUpperCase();
 
       // A4 landscape at 150 dpi
       const W = 1754, H = 1240;
@@ -671,9 +760,9 @@ export default function CourseLearn() {
       // ── 6. "OF COMPLETION" – blue, letter-spaced ──
       ctx.font = `bold 36px Arial, sans-serif`;
       ctx.fillStyle = "#1a6ee5";
-      (ctx as any).letterSpacing = "8px";
+      (ctx as Canvas2DWithLetterSpacing).letterSpacing = "8px";
       ctx.fillText("OF COMPLETION", px + 83, py + 240);
-      (ctx as any).letterSpacing = "0px";
+      (ctx as Canvas2DWithLetterSpacing).letterSpacing = "0px";
 
       // ── 7. Thin separator ──
       ctx.strokeStyle = "#d0d8e4";
@@ -720,7 +809,7 @@ export default function CourseLearn() {
         ctFontSize -= 1;
         ctx.font = `italic bold ${ctFontSize}px Georgia, serif`;
       }
-      ctx.fillStyle = "#07091e";
+      ctx.fillStyle = "#1a3a8f";   // navy blue
       ctx.fillText(courseLabel, px + 80, py + 572);
 
       // ── 12. "a full hands-on course by Beyond Basic" ──
@@ -754,11 +843,46 @@ export default function CourseLearn() {
       ctx.fillStyle = "#666666";
       ctx.fillText("Training Coordinator", sigRX, sigY + 42);
 
-      // Issue date – bottom-right of white panel
+      // Issue date – above QR code
       ctx.textAlign = "right";
       ctx.font      = "20px Arial, sans-serif";
       ctx.fillStyle = "#888888";
-      ctx.fillText(`Issued: ${issueDate}`, px + pw - 40, sigY + 42);
+      ctx.fillText(`Issued: ${issueDate}`, px + pw - 40, sigY - 16);
+
+      // ── 14b. QR code – bottom-right of white panel ──
+      const qrPayload = JSON.stringify({
+        certId,
+        name:   studentName,
+        course: courseTitle,
+        issued: issueDate,
+        platform: "BeyondBasic",
+      });
+      const qrSize   = 170;   // pixels on the certificate canvas
+      const qrCanvas = document.createElement("canvas");
+      await QRCode.toCanvas(qrCanvas, qrPayload, {
+        width:  qrSize,
+        margin: 1,
+        color:  { dark: "#07091e", light: "#ffffff" },
+      });
+
+      // White background square so QR sits cleanly on the panel
+      const qrX = px + pw - qrSize - 36;
+      const qrY = sigY - qrSize + 4;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(qrX - 4, qrY - 4, qrSize + 8, qrSize + 8);
+      ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
+
+      // Tiny "Verify" label under QR
+      ctx.textAlign = "center";
+      ctx.font      = "16px Arial, sans-serif";
+      ctx.fillStyle = "#999999";
+      ctx.fillText("Scan to verify", qrX + qrSize / 2, qrY + qrSize + 20);
+
+      // Certificate ID under label
+      ctx.font      = "14px Arial, sans-serif";
+      ctx.fillStyle = "#bbbbbb";
+      ctx.fillText(`ID: ${certId}`, qrX + qrSize / 2, qrY + qrSize + 40);
+      ctx.textAlign = "left";
 
       // ── 14. Dark-navy logo banner (bookmark shape, top-right) ──
       const bx = W - 218, bw = 162, bh = 285;
@@ -790,7 +914,7 @@ export default function CourseLearn() {
 
       // ── 15. Export as PDF ──
       const { default: jsPDF } = await import("jspdf");
-      const pdf = new (jsPDF as any)({ orientation: "landscape", unit: "mm", format: "a4" });
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
       const imgData = canvas.toDataURL("image/jpeg", 0.95);
       pdf.addImage(imgData, "JPEG", 0, 0, 297, 210);
       pdf.save(`BeyondBasic_Certificate_${courseTitle.replace(/\s+/g, "_")}.pdf`);
@@ -1064,7 +1188,12 @@ export default function CourseLearn() {
               </div>
 
               {/* Article content */}
-              <ContentRenderer key={currentSubtopic._id} blocks={currentSubtopic.content || []} />
+              <ContentRenderer
+                key={currentSubtopic._id}
+                blocks={currentSubtopic.content || []}
+                quizAnswers={quizAnswers}
+                onQuizAnswer={(idx, value) => setQuizAnswers((prev) => ({ ...prev, [idx]: value }))}
+              />
 
               {/* Action bar */}
               <div className="mt-12 pt-6 border-t border-slate-200">
@@ -1099,16 +1228,101 @@ export default function CourseLearn() {
                       <ChevronLeft className="w-4 h-4" />
                       <span className="hidden sm:inline">Previous</span>
                     </Button>
+                    {/* Next is always clickable — handleNext shows toast when gate is active */}
                     <Button
                       disabled={!nextSubtopic}
-                      onClick={() => nextSubtopic && loadSubtopic(nextSubtopic._id)}
-                      className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white gap-1.5 font-semibold"
+                      onClick={handleNext}
+                      className={`flex-1 sm:flex-none gap-1.5 font-semibold transition-all ${
+                        nextSubtopic && !isCurrentDone && !canProceed
+                          ? "bg-slate-400 hover:bg-slate-500 text-white"
+                          : "bg-blue-600 hover:bg-blue-700 text-white"
+                      }`}
                     >
-                      <span className="hidden sm:inline">Next</span>
+                      {nextSubtopic && !isCurrentDone && !canProceed
+                        ? <Lock className="w-3.5 h-3.5" />
+                        : <span className="hidden sm:inline">Next</span>
+                      }
                       <ChevronRight className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
+
+                {/* Lesson requirements (hidden once lesson is already complete) */}
+                {!isCurrentDone && (
+                  <div className="mt-4 p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-3">
+                    <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Lesson Requirements</p>
+
+                    {/* Reading timer */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+                          <Clock className="w-3.5 h-3.5 text-blue-500" />
+                          Reading time
+                        </div>
+                        <span className={`text-xs font-bold ${hasReadEnough ? "text-green-600" : "text-slate-500"}`}>
+                          {hasReadEnough
+                            ? "✓ Done"
+                            : `${Math.floor(timeSpent / 60)}m ${String(timeSpent % 60).padStart(2, "0")}s / 5m 00s`}
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-1000 ${hasReadEnough ? "bg-green-500" : "bg-blue-500"}`}
+                          style={{ width: `${Math.min((timeSpent / MIN_READ_SECONDS) * 100, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Quiz progress (only when lesson has quizzes) */}
+                    {quizCount > 0 && (
+                      <div className="flex items-center justify-between pt-1">
+                        <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+                          <HelpCircle className="w-3.5 h-3.5 text-violet-500" />
+                          Quizzes
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            {Array.from({ length: quizCount }).map((_, i) => (
+                              <div
+                                key={i}
+                                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                                  quizAnswers[
+                                    currentSubtopic?.content
+                                      ?.map((b, idx) => (b.type === "quiz" ? idx : -1))
+                                      .filter((idx) => idx !== -1)[i] ?? -1
+                                  ] !== undefined &&
+                                  quizAnswers[
+                                    currentSubtopic?.content
+                                      ?.map((b, idx) => (b.type === "quiz" ? idx : -1))
+                                      .filter((idx) => idx !== -1)[i] ?? -1
+                                  ] !== null
+                                    ? "bg-green-500 text-white"
+                                    : "bg-slate-200 text-slate-400"
+                                }`}
+                              >
+                                {i + 1}
+                              </div>
+                            ))}
+                          </div>
+                          <span className={`text-xs font-bold ${allQuizzesDone ? "text-green-600" : "text-violet-600"}`}>
+                            {allQuizzesDone ? "✓ All done" : `${answeredCount}/${quizCount}`}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Unlock hint */}
+                    {!canProceed && (
+                      <p className="text-[11px] font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        {!hasReadEnough && quizCount > 0 && !allQuizzesDone
+                          ? "Read for 5 minutes and complete all quizzes to unlock Next →"
+                          : !hasReadEnough
+                          ? "Keep reading — 5 minutes required to unlock Next →"
+                          : "Complete all quizzes to unlock Next →"}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Progress bar + stats */}
                 <div className="mt-5 p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
@@ -1199,6 +1413,25 @@ export default function CourseLearn() {
             onClose={() => setShowNotes(false)}
           />
         )}
+      </div>
+
+      {/* ── Toast notifications ─────────────────────────────────────── */}
+      <div className="fixed top-16 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full">
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className="pointer-events-auto flex items-start gap-3 px-4 py-3 bg-slate-900 text-white rounded-xl shadow-2xl border border-slate-700 animate-in slide-in-from-right"
+          >
+            <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+            <span className="text-sm font-medium flex-1 leading-snug">{t.message}</span>
+            <button
+              onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
+              className="text-slate-400 hover:text-white flex-shrink-0 mt-0.5"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
       </div>
 
       {/* Mobile bottom bar for progress */}
