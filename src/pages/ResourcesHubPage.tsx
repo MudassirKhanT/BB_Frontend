@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import {
   MessageSquare, FileText, Code2, BookOpen, PenLine,
-  ArrowRight, Users, Star, Zap,
+  ArrowRight, Users, Star, Zap, Rocket,
 } from "lucide-react";
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
@@ -48,6 +48,20 @@ const CATEGORIES = [
     badge: "Technical",
     badgeColor: "bg-blue-100 text-blue-700",
     count: "50+ topics",
+  },
+  {
+    slug: "hackathon",
+    label: "AI Hackathon",
+    description: "Compete in 48-hour MERN stack hackathons. Form a team of 2–4, pick a problem statement, build and submit your project — scored by AI for code quality and relevance.",
+    icon: Rocket,
+    color: "from-violet-500 to-indigo-700",
+    bg: "bg-violet-50",
+    border: "border-violet-200",
+    iconBg: "bg-violet-100",
+    iconColor: "text-violet-600",
+    badge: "Hackathon",
+    badgeColor: "bg-violet-100 text-violet-700",
+    count: "Join & compete",
   },
   {
     slug: "cs-fundamentals",
@@ -140,7 +154,7 @@ export default function ResourcesHubPage() {
             return (
               <Link
                 key={cat.slug}
-                to={`/resources/${cat.slug}`}
+                to={cat.slug === "hackathon" ? "/hackathon" : `/resources/${cat.slug}`}
                 className={`group relative bg-white rounded-2xl border ${cat.border} p-6 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col`}
               >
                 {/* Top row */}

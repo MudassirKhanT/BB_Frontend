@@ -24,6 +24,7 @@ interface Contest {
   totalRegistrations: number;
   banner: string;
   isPublished: boolean;
+  isStarted: boolean;
 }
 
 const TYPE_BADGE: Record<ContestType, { label: string; cls: string } | null> = {
@@ -379,7 +380,9 @@ export default function ContestsPage() {
         ) : (
           <div className="space-y-4">
             {filtered.map((contest) => {
-              const st = STATUS_CFG[contest.status];
+              const st = !contest.isStarted
+                ? { label: "Not Started", cls: "bg-slate-100 text-slate-500 border border-slate-200", dot: "bg-slate-400" }
+                : STATUS_CFG[contest.status];
               return (
                 <div key={contest._id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow group">
                   {/* Banner strip */}
@@ -426,10 +429,7 @@ export default function ContestsPage() {
                             <Users className="w-3 h-3" />
                             {contest.totalRegistrations} registered
                           </span>
-                          {contest.status === "upcoming" && (
-                            <Countdown target={contest.startTime} prefix="Starts in" />
-                          )}
-                          {contest.status === "ongoing" && (
+                          {contest.isStarted && contest.status === "ongoing" && (
                             <Countdown target={contest.endTime} prefix="Ends in" />
                           )}
                         </div>
@@ -458,12 +458,12 @@ export default function ContestsPage() {
                         <Link
                           to={`/contests/${contest.slug}`}
                           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                            contest.status === "ongoing"
+                            contest.isStarted && contest.status === "ongoing"
                               ? "bg-green-600 hover:bg-green-500 text-white shadow-md shadow-green-500/30"
                               : "bg-primary hover:bg-primary/90 text-white shadow"
                           }`}
                         >
-                          {contest.status === "ongoing" ? "Enter" : "View"}
+                          {contest.isStarted && contest.status === "ongoing" ? "Enter" : "View"}
                           <ChevronRight className="w-4 h-4" />
                         </Link>
                       </div>

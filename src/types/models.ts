@@ -207,8 +207,81 @@ export interface Contest {
   banner: string;
   type: "weekly" | "monthly" | "custom";
   isPublished: boolean;
+  isStarted: boolean;
+  startedAt?: string;
   totalRegistrations: number;
   status?: "upcoming" | "ongoing" | "ended";
+  createdAt?: string;
+}
+
+// ── Hackathon ─────────────────────────────────────────────────────────────────
+export interface HackathonPS {
+  _id: string;
+  hackathon: string;
+  title: string;
+  description: string;
+  techStack: string[];
+  difficulty: "Easy" | "Medium" | "Hard";
+  isLocked: boolean;
+  lockedByTeam: { _id: string; teamName: string } | null;
+  order: number;
+  isPublished: boolean;
+}
+
+export interface HackathonTeam {
+  _id: string;
+  hackathon: string;
+  teamName: string;
+  leader: string;
+  memberEmails: string[];
+  selectedPS: HackathonPS | null;
+  isSubmitted: boolean;
+  createdAt?: string;
+}
+
+export interface Hackathon {
+  _id: string;
+  title: string;
+  slug: string;
+  description: string;
+  theme: string;
+  startTime: string;
+  endTime: string;
+  maxTeamSize: number;
+  minTeamSize: number;
+  banner: string;
+  prizePool: string;
+  isPublished: boolean;
+  isStarted: boolean;
+  startedAt?: string;
+  status?: "upcoming" | "active" | "ended";
+  createdAt?: string;
+}
+
+export interface HackathonLeaderboardEntry {
+  rank: number;
+  teamName: string;
+  memberEmails: string[];
+  psTitle: string;
+  difficulty: "Easy" | "Medium" | "Hard";
+  score: number;
+  review: string;
+  scoringDetails: { codeQuality: number; relevance: number; innovation: number; completeness: number };
+  githubUrl: string;
+  submittedAt: string;
+}
+
+export interface HackathonSubmission {
+  _id: string;
+  hackathon: string;
+  team: { teamName: string; memberEmails: string[] };
+  ps: { title: string; difficulty: string };
+  githubUrl: string;
+  zipUrl: string;
+  aiScore: number;
+  aiReview: string;
+  scoringDetails: { codeQuality: number; relevance: number; innovation: number; completeness: number };
+  isScored: boolean;
   createdAt?: string;
 }
 
@@ -435,4 +508,90 @@ export interface ResumeAnalysis {
 /** Safely extract an error message from an unknown catch value */
 export function getErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : "An unexpected error occurred";
+}
+
+// ── Alumni Connect ────────────────────────────────────────────────────────────
+export interface AlumniProfile {
+  _id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  batch: string;
+  branch: string;
+  currentRole: string;
+  currentCompany: string;
+  domain: string;
+  bio: string;
+  linkedIn: string;
+  skills: string[];
+  isVerified: boolean;
+  contributionScore: number;
+  sessionsCount: number;
+  referralsCount: number;
+  postsCount: number;
+  createdAt?: string;
+}
+
+export interface AlumniExperience {
+  _id: string;
+  alumni: AlumniProfile;
+  title: string;
+  company: string;
+  domain: string;
+  content: string;
+  tags: string[];
+  likes: number;
+  readTime: number;
+  isPublished: boolean;
+  createdAt?: string;
+}
+
+export interface AlumniSlot {
+  _id: string;
+  alumni: AlumniProfile;
+  date: string;
+  time: string;
+  duration: 30 | 60;
+  sessionType: "Mentorship" | "Mock Interview" | "Career Guidance";
+  isBooked: boolean;
+  topic: string;
+  createdAt?: string;
+}
+
+export interface AlumniReferral {
+  _id: string;
+  alumni: AlumniProfile;
+  company: string;
+  role: string;
+  jobUrl: string;
+  description: string;
+  skills: string[];
+  location: string;
+  deadline?: string;
+  applicantsCount: number;
+  isActive: boolean;
+  createdAt?: string;
+}
+
+export interface AlumniQuestion {
+  _id: string;
+  studentName: string;
+  question: string;
+  answer: string;
+  isAnswered: boolean;
+  votes: number;
+  createdAt?: string;
+}
+
+export interface AlumniAMA {
+  _id: string;
+  alumni: AlumniProfile;
+  title: string;
+  description: string;
+  scheduledAt?: string;
+  isLive: boolean;
+  isCompleted: boolean;
+  questions: AlumniQuestion[];
+  registrationsCount: number;
+  createdAt?: string;
 }

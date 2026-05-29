@@ -26,11 +26,14 @@ import MockExamPage from "./pages/MockExamPage";
 import ContestsPage from "./pages/ContestsPage";
 import ContestDetailPage from "./pages/ContestDetailPage";
 import ContestSolverPage from "./pages/ContestSolverPage";
+import HackathonPage from "./pages/HackathonPage";
+import HackathonSubmitPage from "./pages/HackathonSubmitPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import PracticePage from "./pages/PracticePage";
 import JobsPage from "./pages/JobsPage";
 import ProfilePage from "./pages/ProfilePage";
 import RoadmapGeneratorPage from "./pages/RoadmapGeneratorPage";
+import AlumniConnectPage from "./pages/AlumniConnectPage";
 
 function App() {
   return (
@@ -67,10 +70,14 @@ function App() {
         <Route path="/contests" element={<ContestsPage />} />
         <Route path="/contests/:slug/solve/:problemSlug" element={<ContestSolverPage />} />
         <Route path="/contests/:slug" element={<ContestDetailPage />} />
+        <Route path="/hackathon" element={<HackathonPage />} />
+        <Route path="/hackathon/:slug/submit" element={<HackathonSubmitPage />} />
+        <Route path="/hackathon/:slug" element={<HackathonPage />} />
         <Route path="/jobs" element={<JobsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/roadmap-generator" element={<RoadmapGeneratorPage />} />
+        <Route path="/alumni-connect" element={<AlumniConnectPage />} />
       </Routes>
     </>
   );

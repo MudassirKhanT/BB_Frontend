@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Plus, Pencil, Trash2, X, Loader2, Trophy,
-  ArrowLeft, ChevronRight, Code2,
+  ArrowLeft, ChevronRight, Code2, Play,
 } from "lucide-react";
 import { contestApi, adminProblemApi } from "../../lib/api";
 import {
@@ -377,8 +377,9 @@ export default function ContestPanel() {
   const [editItem, setEdit]     = useState<Contest | null>(null);
   const [form, setForm]         = useState<ContestForm>({ ...BLANK_CONTEST });
   const [saving, setSaving]     = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [error, setError]       = useState("");
+  const [deleteId, setDeleteId]   = useState<string | null>(null);
+  const [startingId, setStartingId] = useState<string | null>(null);
+  const [error, setError]         = useState("");
   const [activeContest, setActiveContest] = useState<Contest | null>(null);
 
   const load = () => contestApi.adminGetAll().then((d: { contests?: Contest[] } | Contest[]) => {
@@ -411,6 +412,13 @@ export default function ContestPanel() {
     if (!deleteId) return;
     try { await contestApi.delete(deleteId); setDeleteId(null); await load(); }
     catch (err: unknown) { alert(getErrorMessage(err)); }
+  };
+
+  const handleStart = async (id: string) => {
+    setStartingId(id);
+    try { await contestApi.start(id); await load(); }
+    catch (err: unknown) { alert(getErrorMessage(err)); }
+    finally { setStartingId(null); }
   };
 
   const getStatus = (item: Contest) => {
@@ -472,14 +480,25 @@ export default function ContestPanel() {
                       <td className="px-4 py-3 text-slate-600">{(item.problems||[]).length}</td>
                       <td className="px-4 py-3 text-slate-600">{item.totalRegistrations ?? 0}</td>
                       <td className="px-4 py-3">
-                        {status === "live"
+                        {item.isStarted && status === "live"
                           ? <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-green-100 text-green-700"><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />Live</span>
-                          : status === "upcoming"
-                          ? <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-blue-100 text-blue-700">Upcoming</span>
-                          : <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-slate-100 text-slate-500">Ended</span>}
+                          : item.isStarted && status === "ended"
+                          ? <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-slate-100 text-slate-500">Ended</span>
+                          : <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-blue-100 text-blue-700">Not Started</span>}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1.5">
+                          {!item.isStarted && item.isPublished && (
+                            <button
+                              onClick={() => handleStart(item._id)}
+                              disabled={startingId === item._id}
+                              title="Start Contest"
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                            >
+                              {startingId === item._id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                              Start
+                            </button>
+                          )}
                           <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"><Pencil className="w-3.5 h-3.5" /></button>
                           <button onClick={() => setDeleteId(item._id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>

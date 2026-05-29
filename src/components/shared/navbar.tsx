@@ -14,6 +14,8 @@ const resourceLinks = [
   { label: "Mock Tests", to: "/mock-assessments" },
   { label: "Resume AI", to: "/resume-analyzer" },
   { label: "AI Roadmap", to: "/roadmap-generator" },
+  { label: "AI Hackathon", to: "/hackathon" },
+  { label: "Alumni Connect", to: "/alumni-connect" },
   { label: "Interview Experiences", to: "/resources/interview-experiences" },
   { label: "Resource Hub", to: "/resources" },
   { label: "How It Works", to: "/how-it-works" },

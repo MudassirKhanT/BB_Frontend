@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, BookOpen, Code2, Building2, Trophy,
   ClipboardList, FileText, Users, UserCog, ChevronRight,
-  Menu, Zap, LogOut,
+  Menu, Zap, LogOut, GraduationCap,
 } from "lucide-react";
 import OverviewPanel from "../components/admin/OverviewPanel";
 import CoursesPanel from "../components/admin/CoursesPanel";
@@ -14,6 +14,8 @@ import MockPanel from "../components/admin/MockPanel";
 import ResourcePanel from "../components/admin/ResourcePanel";
 import InterviewExpPanel from "../components/admin/InterviewExpPanel";
 import UsersPanel from "../components/admin/UsersPanel";
+import HackathonPanel from "../components/admin/HackathonPanel";
+import AlumniPanel from "../components/admin/AlumniPanel";
 
 const NAV = [
   { id: "overview",      label: "Overview",          icon: LayoutDashboard },
@@ -21,9 +23,11 @@ const NAV = [
   { id: "problems",      label: "Problems",           icon: Code2 },
   { id: "companies",     label: "Companies",          icon: Building2 },
   { id: "contests",      label: "Contests",           icon: Trophy },
+  { id: "hackathon",     label: "Hackathon",          icon: Trophy },
   { id: "mock-exams",    label: "Mock Exams",         icon: ClipboardList },
   { id: "resources",     label: "Resources",          icon: FileText },
   { id: "interview-exp", label: "Interview Exp.",     icon: Users },
+  { id: "alumni",        label: "Alumni",             icon: GraduationCap },
   { id: "users",         label: "Users",              icon: UserCog },
 ];
 
@@ -52,14 +56,16 @@ export default function AdminDashboard() {
   };
 
   const PANELS: Record<string, React.ReactNode> = {
-    overview:       <OverviewPanel onNav={navTo} refreshKey={overviewKey} />,
+    overview:        <OverviewPanel onNav={navTo} refreshKey={overviewKey} />,
     courses:         <CoursesPanel />,
     problems:        <ProblemsPanel />,
     companies:       <CompanyPanel />,
     contests:        <ContestPanel />,
+    hackathon:       <HackathonPanel />,
     "mock-exams":    <MockPanel />,
     resources:       <ResourcePanel />,
     "interview-exp": <InterviewExpPanel />,
+    alumni:          <AlumniPanel />,
     users:           <UsersPanel />,
   };
 
