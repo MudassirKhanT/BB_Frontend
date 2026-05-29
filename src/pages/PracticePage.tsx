@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, ExternalLink, CheckCircle2, Circle, Code2, BookOpen, AlertCircle, Search, FileText } from "lucide-react";
+import { ChevronDown, ExternalLink, CheckCircle2, Circle, Code2, BookOpen, AlertCircle, Search, FileText, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Navbar } from "@/components/shared/navbar";
@@ -14,6 +14,7 @@ interface Problem {
   difficulty: "Easy" | "Medium" | "Hard";
   frequency: number;
   topicTag: string;
+  type: "coding" | "sql";
   leetcodeUrl: string;
   solutionArticle?: string;
   userStatus: "solved" | "attempted" | null;
@@ -131,20 +132,35 @@ function TopicSection({ group, defaultOpen }: { group: TopicGroup; defaultOpen: 
 }
 
 export default function PracticePage() {
-  const [topics, setTopics] = useState<TopicGroup[]>([]);
+  const [allTopics, setAllTopics] = useState<TopicGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "solved" | "unsolved">("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [problemType, setProblemType] = useState<"dsa" | "sql">("dsa");
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
     problemApi
       .getAll()
-      .then((data) => setTopics((data as { topics: TopicGroup[] }).topics || []))
+      .then((data) => setAllTopics((data as { topics: TopicGroup[] }).topics || []))
       .catch((err: unknown) => setError(err instanceof Error ? err.message : "Failed to load problems"))
       .finally(() => setLoading(false));
   }, []);
+
+  const topics = useMemo(() => {
+    const isSql = problemType === "sql";
+    return allTopics
+      .map((group) => {
+        const filtered = group.problems.filter((p) =>
+          isSql ? p.type === "sql" : p.type !== "sql"
+        );
+        const solved = filtered.filter((p) => p.userStatus === "solved").length;
+        return { ...group, problems: filtered, solved, total: filtered.length };
+      })
+      .filter((g) => g.total > 0);
+  }, [allTopics, problemType]);
 
   const totalSolved = topics.reduce((sum, g) => sum + g.solved, 0);
   const totalProblems = topics.reduce((sum, g) => sum + g.total, 0);
@@ -197,6 +213,22 @@ export default function PracticePage() {
           )}
         </div>
 
+        {/* Problem Type Toggle */}
+        <div className="flex items-center gap-1 bg-white rounded-xl p-1 shadow-sm mb-4 w-fit" style={{ border: "1px solid #e2e8f0" }}>
+          <button
+            onClick={() => { setProblemType("dsa"); setSearchQuery(""); setFilter("all"); }}
+            className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-all ${problemType === "dsa" ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}
+          >
+            <Code2 className="w-4 h-4" />DSA
+          </button>
+          <button
+            onClick={() => { setProblemType("sql"); setSearchQuery(""); setFilter("all"); }}
+            className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-all ${problemType === "sql" ? "bg-amber-500 text-white shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}
+          >
+            <Database className="w-4 h-4" />SQL
+          </button>
+        </div>
+
         {/* Filters */}
         <div className="flex flex-col lg:flex-row gap-3 mb-6">
           <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-2.5 flex-1 shadow-sm" style={{ border: "1px solid #e2e8f0" }}>
@@ -216,7 +248,6 @@ export default function PracticePage() {
               </button>
             ))}
           </div>
-
         </div>
 
         {/* Content */}
@@ -238,7 +269,7 @@ export default function PracticePage() {
         ) : filteredTopics.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <BookOpen className="w-12 h-12 text-slate-300 mb-3" />
-            <p className="font-semibold text-slate-500 mb-1">{searchQuery ? "No problems match your search" : "No problems available yet"}</p>
+            <p className="font-semibold text-slate-500 mb-1">{searchQuery ? "No problems match your search" : `No ${problemType.toUpperCase()} problems available yet`}</p>
             {searchQuery && (
               <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")}>
                 Clear search

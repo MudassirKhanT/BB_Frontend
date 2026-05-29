@@ -10,11 +10,19 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [role, setRole] = useState<"student" | "alumni">("student");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
+    // Alumni-only fields
+    currentRole: "",
+    currentCompany: "",
+    batch: "",
+    branch: "",
+    domain: "",
+    bio: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -52,6 +60,15 @@ export default function SignupPage() {
           username: formData.name.replace(/\s+/g, "_").toLowerCase(),
           email: formData.email,
           password: formData.password,
+          role,
+          ...(role === "alumni" ? {
+            currentRole: formData.currentRole,
+            currentCompany: formData.currentCompany,
+            batch: formData.batch,
+            branch: formData.branch,
+            domain: formData.domain,
+            bio: formData.bio,
+          } : {}),
         }),
       });
       const data = await res.json();
@@ -184,6 +201,28 @@ export default function SignupPage() {
             <CardContent className="pt-2">
               <form onSubmit={handleSubmit} className="space-y-5">
                 {errors.general && <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 font-medium">{errors.general}</div>}
+
+                {/* Role selector */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700">I am a</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {(["student", "alumni"] as const).map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setRole(r)}
+                        className={`py-2.5 rounded-xl text-sm font-bold border-2 transition-all capitalize ${
+                          role === r
+                            ? "border-primary bg-primary/5 text-primary"
+                            : "border-slate-200 text-slate-500 hover:border-slate-300"
+                        }`}
+                      >
+                        {r === "student" ? "🎓 Student" : "👔 Alumni"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Name field */}
                 <div className="space-y-2">
                   <label htmlFor="name" className="text-sm font-semibold text-slate-700">
@@ -241,6 +280,46 @@ export default function SignupPage() {
                   </div>
                   {errors.confirmPassword && <p className="text-xs text-red-500 font-medium">{errors.confirmPassword}</p>}
                 </div>
+
+                {/* Alumni-only fields */}
+                {role === "alumni" && (
+                  <div className="space-y-4 pt-1 pb-1 border-t border-slate-100">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest pt-2">Alumni Profile Info</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-sm font-semibold text-slate-700">Current Role</label>
+                        <Input placeholder="e.g. SDE at Amazon" value={formData.currentRole} onChange={(e) => setFormData({ ...formData, currentRole: e.target.value })} className="h-10 text-sm ring-0 focus-visible:ring-0" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-sm font-semibold text-slate-700">Company</label>
+                        <Input placeholder="e.g. Amazon" value={formData.currentCompany} onChange={(e) => setFormData({ ...formData, currentCompany: e.target.value })} className="h-10 text-sm ring-0 focus-visible:ring-0" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-sm font-semibold text-slate-700">Batch Year</label>
+                        <Input placeholder="e.g. 2022" value={formData.batch} onChange={(e) => setFormData({ ...formData, batch: e.target.value })} className="h-10 text-sm ring-0 focus-visible:ring-0" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-sm font-semibold text-slate-700">Branch</label>
+                        <Input placeholder="e.g. CSE" value={formData.branch} onChange={(e) => setFormData({ ...formData, branch: e.target.value })} className="h-10 text-sm ring-0 focus-visible:ring-0" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-semibold text-slate-700">Domain</label>
+                      <select value={formData.domain} onChange={(e) => setFormData({ ...formData, domain: e.target.value })} className="w-full h-10 px-3 rounded-xl border border-input text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 text-slate-700 font-medium">
+                        <option value="">Select your domain</option>
+                        {["Software Engineering","Data Science","Frontend Development","Backend Development","DevOps & Cloud","Product Management","Machine Learning","Full Stack Development"].map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-semibold text-slate-700">Bio <span className="text-slate-400 font-normal">(optional)</span></label>
+                      <textarea placeholder="A short intro about your journey…" value={formData.bio} onChange={(e) => setFormData({ ...formData, bio: e.target.value })} rows={2} className="w-full px-3 py-2 rounded-xl border border-input text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+                    </div>
+                  </div>
+                )}
 
                 {/* Terms checkbox */}
                 <div className="flex items-start gap-3 pt-2">

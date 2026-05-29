@@ -101,7 +101,12 @@ export const authApi = {
 
 // ── Problem API ──
 export const problemApi = {
-  getAll: (company?: string) => api.get(`/problems/all${company ? `?company=${encodeURIComponent(company)}` : ""}`),
+  getAll: (params?: { company?: string; type?: string }) => {
+    const qs = params
+      ? new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== "") as [string, string][]).toString()
+      : "";
+    return api.get(`/problems/all${qs ? `?${qs}` : ""}`);
+  },
   getByCourse: (courseSlug: string) => api.get(`/problems/course/${courseSlug}`),
   getBySlug: (slug: string) => api.get(`/problems/${slug}`),
   getPotd: () => api.get("/problems/potd"),
@@ -168,11 +173,13 @@ export const mockApi = {
   addQuestion: (id: string, data: unknown) => api.post(`/mock/${id}/questions`, data),
   updateQuestion: (qid: string, data: unknown) => api.patch(`/mock/questions/${qid}`, data),
   deleteQuestion: (qid: string) => api.delete(`/mock/questions/${qid}`),
+  getAllResultsAdmin: () => api.get("/mock/admin/results"),
 };
 
 // ── Contest API ──
 export const contestApi = {
   getAll: () => api.get("/contest"),
+  adminGetAll: () => api.get("/contest/admin/all"),
   getBySlug: (slug: string) => api.get(`/contest/${slug}`),
   getLeaderboard: (slug: string) => api.get(`/contest/${slug}/leaderboard`),
   register: (slug: string) => api.post(`/contest/${slug}/register`, {}),
@@ -185,6 +192,7 @@ export const contestApi = {
   addProblem: (id: string, data: unknown) => api.post(`/contest/${id}/problems`, data),
   removeProblem: (id: string, problemId: string) => api.delete(`/contest/${id}/problems/${problemId}`),
   createProblem: (id: string, data: unknown) => api.post(`/contest/${id}/create-problem`, data),
+  start: (id: string) => api.patch(`/contest/${id}/start`, {}),
 };
 
 // ── Admin Problems API ──
@@ -227,6 +235,28 @@ export const roadmapApi = {
     api.post("/roadmap/generate", data),
 };
 
+// ── Hackathon API ──
+export const hackathonApi = {
+  getAll:            ()                          => api.get("/hackathon"),
+  adminGetAll:       ()                          => api.get("/hackathon/admin/all"),
+  getBySlug:         (slug: string)              => api.get(`/hackathon/slug/${slug}`),
+  registerTeam:      (data: unknown)             => api.post(`/hackathon/${(data as { hackathonId: string }).hackathonId}/teams/register`, data),
+  getMyTeam:         (hackathonId: string)       => api.get(`/hackathon/${hackathonId}/teams/my`),
+  selectPS:          (hackathonId: string, psId: string) => api.post(`/hackathon/${hackathonId}/teams/select-ps`, { psId }),
+  submit:            (hackathonId: string, data: unknown) => api.post(`/hackathon/${hackathonId}/submit`, data),
+  getLeaderboard:    (hackathonId: string)       => api.get(`/hackathon/${hackathonId}/leaderboard`),
+  // Admin
+  create:            (data: unknown)             => api.post("/hackathon", data),
+  update:            (id: string, data: unknown) => api.patch(`/hackathon/${id}`, data),
+  delete:            (id: string)                => api.delete(`/hackathon/${id}`),
+  createPS:          (hackathonId: string, data: unknown) => api.post(`/hackathon/${hackathonId}/ps`, data),
+  updatePS:          (hackathonId: string, psId: string, data: unknown) => api.patch(`/hackathon/${hackathonId}/ps/${psId}`, data),
+  deletePS:          (hackathonId: string, psId: string) => api.delete(`/hackathon/${hackathonId}/ps/${psId}`),
+  getAdminTeams:     (hackathonId: string)       => api.get(`/hackathon/${hackathonId}/admin/teams`),
+  getAdminSubmissions: (hackathonId: string)     => api.get(`/hackathon/${hackathonId}/admin/submissions`),
+  start:             (id: string)                => api.patch(`/hackathon/${id}/start`, {}),
+};
+
 // ── Resource API ──
 export const resourceApi = {
   getAll: (params?: { type?: string; category?: string; difficulty?: string }) => {
@@ -238,4 +268,35 @@ export const resourceApi = {
   create: (data: unknown) => api.post("/resource", data),
   update: (id: string, data: unknown) => api.patch(`/resource/${id}`, data),
   delete: (id: string) => api.delete(`/resource/${id}`),
+};
+
+// ── Alumni API ──
+export const alumniApi = {
+  // Public reads
+  getProfiles:      ()                                  => api.get("/alumni/profiles"),
+  getExperiences:   (domain?: string, company?: string) => {
+    const qs = new URLSearchParams();
+    if (domain)  qs.set("domain", domain);
+    if (company) qs.set("company", company);
+    const q = qs.toString();
+    return api.get(`/alumni/experiences${q ? `?${q}` : ""}`);
+  },
+  getSlots:         ()                                  => api.get("/alumni/slots"),
+  getReferrals:     ()                                  => api.get("/alumni/referrals"),
+  getAMAs:          ()                                  => api.get("/alumni/ama"),
+  // Authenticated
+  getMyProfile:     ()                                  => api.get("/alumni/me"),
+  bookSlot:         (id: string, topic: string)         => api.post(`/alumni/slots/${id}/book`, { topic }),
+  applyReferral:    (id: string)                        => api.post(`/alumni/referrals/${id}/apply`, {}),
+  postQuestion:     (id: string, question: string)      => api.post(`/alumni/ama/${id}/question`, { question }),
+  // Alumni-only creates
+  createExperience: (data: unknown)                     => api.post("/alumni/experiences", data),
+  createSlot:       (data: unknown)                     => api.post("/alumni/slots", data),
+  createReferral:   (data: unknown)                     => api.post("/alumni/referrals", data),
+  createAMA:        (data: unknown)                     => api.post("/alumni/ama", data),
+  // Admin
+  adminGetAll:      ()                                  => api.get("/alumni/admin/all"),
+  adminToggleVerify:(id: string)                        => api.patch(`/alumni/admin/${id}/verify`, {}),
+  adminUpdate:      (id: string, data: unknown)         => api.patch(`/alumni/admin/${id}`, data),
+  adminDelete:      (id: string)                        => api.delete(`/alumni/admin/${id}`),
 };

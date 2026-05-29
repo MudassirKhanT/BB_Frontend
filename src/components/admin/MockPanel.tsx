@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, X, Loader2, ClipboardList, Eye, EyeOff, ListChecks, ArrowLeft } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Loader2, ClipboardList, Eye, EyeOff, ListChecks, ArrowLeft, BarChart2 } from "lucide-react";
 import { mockApi } from "../../lib/api";
 import type { MockExam, MockQuestion, MockSection } from "@/types/models";
 
@@ -37,7 +37,18 @@ interface QuestionForm {
 const EXAM_BLANK: ExamForm = { title: "", slug: "", description: "", instructions: "", duration: 60, passingScore: 60, tags: "", banner: BANNERS[0], isPublished: false };
 const Q_BLANK: QuestionForm = { section: "aptitude", question: "", options: ["", "", "", ""], correctAnswer: 0, explanation: "", difficulty: "Easy", order: 0 };
 
+interface MockAttemptResult {
+  _id: string;
+  user: { _id: string; username: string; email: string } | null;
+  exam: { _id: string; title: string; slug: string } | null;
+  score: number;
+  total: number;
+  timeTaken: number;
+  completedAt: string;
+}
+
 export default function MockPanel() {
+  const [activeTab, setActiveTab]   = useState<"exams" | "results">("exams");
   const [exams, setExams]         = useState<MockExam[]>([]);
   const [loading, setLoading]     = useState(true);
   const [showExamModal, setShowE] = useState(false);
@@ -58,8 +69,22 @@ export default function MockPanel() {
   const [deleteQId, setDeleteQId]   = useState<string | null>(null);
   const [qError, setQError]         = useState("");
 
+  // Results state
+  const [results, setResults]       = useState<MockAttemptResult[]>([]);
+  const [loadingR, setLoadingR]     = useState(false);
+
   const loadExams = () => mockApi.getAll().then((d: MockExam[]) => { setExams(Array.isArray(d) ? d : []); setLoading(false); });
+
+  const loadResults = () => {
+    setLoadingR(true);
+    mockApi.getAllResultsAdmin()
+      .then((d: MockAttemptResult[]) => setResults(Array.isArray(d) ? d : []))
+      .finally(() => setLoadingR(false));
+  };
+
   useEffect(() => { loadExams(); }, []);
+
+  useEffect(() => { if (activeTab === "results") loadResults(); }, [activeTab]);
 
   const loadQuestions = async (exam: MockExam) => {
     setActiveExam(exam); setLoadingQ(true);
@@ -237,11 +262,80 @@ export default function MockPanel() {
     );
   }
 
+  // Results view
+  if (activeTab === "results") {
+    const formatTime = (s: number) => `${Math.floor(s / 60)}m ${s % 60}s`;
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 bg-white rounded-xl p-1 shadow-sm" style={{ border: "1px solid #e2e8f0" }}>
+            <button onClick={() => setActiveTab("exams")} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-50">
+              <ClipboardList className="w-4 h-4" />Exams
+            </button>
+            <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-blue-600 text-white shadow-sm">
+              <BarChart2 className="w-4 h-4" />Results
+            </button>
+          </div>
+          <p className="text-sm text-slate-500 font-semibold ml-auto">{results.length} attempt{results.length !== 1 ? "s" : ""}</p>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          {loadingR ? (
+            <div className="flex items-center justify-center py-16 text-slate-400"><Loader2 className="w-6 h-6 animate-spin mr-2" />Loading…</div>
+          ) : results.length === 0 ? (
+            <div className="flex flex-col items-center py-16 text-slate-400"><BarChart2 className="w-10 h-10 mb-3 opacity-40" /><p className="font-semibold">No attempts yet</p></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    {["Student", "Exam", "Score", "Percentage", "Time Taken", "Completed At"].map(h => (
+                      <th key={h} className="px-4 py-3 font-bold text-slate-600 text-left">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {results.map(r => {
+                    const pct = r.total > 0 ? Math.round((r.score / r.total) * 100) : 0;
+                    return (
+                      <tr key={r._id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3">
+                          <p className="font-bold text-slate-900">{r.user?.username ?? "Deleted User"}</p>
+                          <p className="text-xs text-slate-400">{r.user?.email ?? "—"}</p>
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-slate-700">{r.exam?.title ?? "Deleted Exam"}</td>
+                        <td className="px-4 py-3 font-semibold text-slate-700">{r.score} / {r.total}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${pct >= 70 ? "bg-green-100 text-green-700" : pct >= 50 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}`}>
+                            {pct}%
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-500 text-xs">{formatTime(r.timeTaken)}</td>
+                        <td className="px-4 py-3 text-slate-400 text-xs">{new Date(r.completedAt).toLocaleString()}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // Exam list view
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500 font-semibold">{exams.length} exam{exams.length !== 1 ? "s" : ""}</p>
+        <div className="flex items-center gap-1 bg-white rounded-xl p-1 shadow-sm" style={{ border: "1px solid #e2e8f0" }}>
+          <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-blue-600 text-white shadow-sm">
+            <ClipboardList className="w-4 h-4" />Exams
+          </button>
+          <button onClick={() => setActiveTab("results")} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-50">
+            <BarChart2 className="w-4 h-4" />Results
+          </button>
+        </div>
         <button onClick={openCreateExam} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-bold shadow hover:bg-primary/90">
           <Plus className="w-4 h-4" /> New Exam
         </button>

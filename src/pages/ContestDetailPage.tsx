@@ -45,6 +45,7 @@ interface Contest {
   startTime: string;
   endTime: string;
   status: ContestStatus;
+  isStarted: boolean;
   isRegistered: boolean;
   problemCount: number;
   totalRegistrations: number;
@@ -377,7 +378,7 @@ export default function ContestDetailPage() {
   if (!contest) return null;
 
   const sortedProblems = [...contest.problems].sort((a, b) => a.order - b.order);
-  const canEnter = (contest.status === "ongoing" && registered) || isAdmin;
+  const canEnter = (contest.isStarted && contest.status === "ongoing" && registered) || isAdmin;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -414,8 +415,13 @@ export default function ContestDetailPage() {
                   <Users className="w-3.5 h-3.5" />
                   {contest.totalRegistrations} registered
                 </span>
-                {contest.status === "upcoming" && <Countdown target={contest.startTime} prefix="Starts in" />}
-                {contest.status === "ongoing" && <Countdown target={contest.endTime} prefix="Ends in" />}
+                {!contest.isStarted && (
+                  <span className="flex items-center gap-1.5 text-sm font-semibold text-white/60 bg-white/10 border border-white/20 px-3 py-1 rounded-lg">
+                    <Clock className="w-4 h-4" />
+                    Waiting for admin to start
+                  </span>
+                )}
+                {contest.isStarted && contest.status === "ongoing" && <Countdown target={contest.endTime} prefix="Ends in" />}
               </div>
             </div>
             <div className="shrink-0 flex flex-col items-end gap-2">

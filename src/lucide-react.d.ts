@@ -156,4 +156,6 @@ declare module "lucide-react" {
   export const Redo2: FC<IconProps>;
   export const PenLine: FC<IconProps>;
   export const ClipboardPaste: FC<IconProps>;
+  export const Timer: FC<IconProps>;
+  export const Rocket: FC<IconProps>;
 }

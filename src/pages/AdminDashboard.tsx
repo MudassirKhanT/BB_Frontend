@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, BookOpen, Code2, Building2, Trophy,
   ClipboardList, FileText, Users, UserCog, ChevronRight,
-  Menu, Zap, LogOut,
+  Menu, Zap, LogOut, GraduationCap,
 } from "lucide-react";
 import OverviewPanel from "../components/admin/OverviewPanel";
 import CoursesPanel from "../components/admin/CoursesPanel";
@@ -14,6 +14,8 @@ import MockPanel from "../components/admin/MockPanel";
 import ResourcePanel from "../components/admin/ResourcePanel";
 import InterviewExpPanel from "../components/admin/InterviewExpPanel";
 import UsersPanel from "../components/admin/UsersPanel";
+import HackathonPanel from "../components/admin/HackathonPanel";
+import AlumniPanel from "../components/admin/AlumniPanel";
 
 const NAV = [
   { id: "overview",      label: "Overview",          icon: LayoutDashboard },
@@ -21,9 +23,11 @@ const NAV = [
   { id: "problems",      label: "Problems",           icon: Code2 },
   { id: "companies",     label: "Companies",          icon: Building2 },
   { id: "contests",      label: "Contests",           icon: Trophy },
+  { id: "hackathon",     label: "Hackathon",          icon: Trophy },
   { id: "mock-exams",    label: "Mock Exams",         icon: ClipboardList },
   { id: "resources",     label: "Resources",          icon: FileText },
   { id: "interview-exp", label: "Interview Exp.",     icon: Users },
+  { id: "alumni",        label: "Alumni",             icon: GraduationCap },
   { id: "users",         label: "Users",              icon: UserCog },
 ];
 
@@ -31,6 +35,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const [active, setActive] = useState("overview");
   const [sideOpen, setSideOpen] = useState(false);
+  const [overviewKey, setOverviewKey] = useState(0);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -44,16 +49,24 @@ export default function AdminDashboard() {
     navigate("/login");
   };
 
+  const navTo = (id: string) => {
+    if (id === "overview") setOverviewKey((k) => k + 1);
+    setActive(id);
+    setSideOpen(false);
+  };
+
   const PANELS: Record<string, React.ReactNode> = {
-    overview:       <OverviewPanel onNav={setActive} />,
-    courses:        <CoursesPanel />,
-    problems:       <ProblemsPanel />,
-    companies:      <CompanyPanel />,
-    contests:       <ContestPanel />,
-    "mock-exams":   <MockPanel />,
-    resources:      <ResourcePanel />,
-    "interview-exp":<InterviewExpPanel />,
-    users:          <UsersPanel />,
+    overview:        <OverviewPanel onNav={navTo} refreshKey={overviewKey} />,
+    courses:         <CoursesPanel />,
+    problems:        <ProblemsPanel />,
+    companies:       <CompanyPanel />,
+    contests:        <ContestPanel />,
+    hackathon:       <HackathonPanel />,
+    "mock-exams":    <MockPanel />,
+    resources:       <ResourcePanel />,
+    "interview-exp": <InterviewExpPanel />,
+    alumni:          <AlumniPanel />,
+    users:           <UsersPanel />,
   };
 
   const currentLabel = NAV.find(n => n.id === active)?.label ?? "Admin";
@@ -86,7 +99,7 @@ export default function AdminDashboard() {
         {/* Nav items */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
           {NAV.map(({ id, label, icon: Icon }) => (
-            <button key={id} onClick={() => { setActive(id); setSideOpen(false); }}
+            <button key={id} onClick={() => navTo(id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all group ${
                 active === id
                   ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-violet-900/40"

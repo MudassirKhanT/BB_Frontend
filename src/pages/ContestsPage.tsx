@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 type ContestStatus = "upcoming" | "ongoing" | "ended";
+type ContestType = "weekly" | "monthly" | "custom";
 
 interface Contest {
   _id: string;
@@ -18,11 +19,19 @@ interface Contest {
   startTime: string;
   endTime: string;
   status: ContestStatus;
+  type: ContestType;
   problemCount: number;
   totalRegistrations: number;
   banner: string;
   isPublished: boolean;
+  isStarted: boolean;
 }
+
+const TYPE_BADGE: Record<ContestType, { label: string; cls: string } | null> = {
+  weekly:  { label: "Weekly",  cls: "bg-blue-50 text-blue-700 border border-blue-200" },
+  monthly: { label: "Monthly", cls: "bg-violet-50 text-violet-700 border border-violet-200" },
+  custom:  null,
+};
 
 const STATUS_CFG: Record<ContestStatus, { label: string; cls: string; dot: string }> = {
   upcoming: { label: "Upcoming",  cls: "bg-blue-50 text-blue-700 border border-blue-200",   dot: "bg-blue-500" },
@@ -75,7 +84,13 @@ function Countdown({ target, prefix }: { target: string; prefix: string }) {
   );
 }
 
-const BLANK_FORM = { title: "", description: "", startTime: "", endTime: "", banner: BANNER_OPTIONS[0].value, isPublished: false };
+const BLANK_FORM = { title: "", description: "", startTime: "", endTime: "", banner: BANNER_OPTIONS[0].value, type: "custom" as ContestType, isPublished: false };
+
+const CONTEST_TYPE_OPTIONS = [
+  { value: "custom",  label: "Custom" },
+  { value: "weekly",  label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+] as const;
 
 function AdminModal({
   initial,
@@ -142,6 +157,29 @@ function AdminModal({
             </div>
           </div>
           <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Contest Type</label>
+            <div className="flex gap-2">
+              {CONTEST_TYPE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => set("type", opt.value)}
+                  className={`flex-1 py-2 rounded-xl text-sm font-bold border transition-all ${
+                    form.type === opt.value
+                      ? opt.value === "weekly"
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : opt.value === "monthly"
+                        ? "bg-violet-600 text-white border-violet-600"
+                        : "bg-slate-700 text-white border-slate-700"
+                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1">Banner Color</label>
             <div className="flex gap-2 flex-wrap">
               {BANNER_OPTIONS.map((b) => (
@@ -187,6 +225,7 @@ export default function ContestsPage() {
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"all" | ContestStatus>("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | ContestType>("all");
   const [modal, setModal] = useState<(typeof BLANK_FORM & { _id?: string }) | null>(null);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -202,7 +241,9 @@ export default function ContestsPage() {
     contestApi.getAll().then((data) => setContests(data as Contest[])).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  const filtered = tab === "all" ? contests : contests.filter((c) => c.status === tab);
+  const filtered = contests
+    .filter((c) => tab === "all" || c.status === tab)
+    .filter((c) => typeFilter === "all" || c.type === typeFilter);
 
   const handleSave = async (form: typeof BLANK_FORM & { _id?: string }) => {
     setSaving(true);
@@ -269,28 +310,56 @@ export default function ContestsPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-8">
-        {/* Tabs + admin button */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
-            {TABS.map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setTab(key)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${tab === key ? "bg-primary text-white shadow" : "text-slate-600 hover:bg-slate-50"}`}
-              >
-                {label}
-                {key !== "all" && (
-                  <span className="ml-1.5 text-xs opacity-75">
-                    ({contests.filter((c) => c.status === key).length})
-                  </span>
-                )}
-              </button>
-            ))}
+        {/* Filters + admin button */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+          <div className="flex flex-col gap-2">
+            {/* Status tabs */}
+            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm w-fit">
+              {TABS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setTab(key)}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${tab === key ? "bg-primary text-white shadow" : "text-slate-600 hover:bg-slate-50"}`}
+                >
+                  {label}
+                  {key !== "all" && (
+                    <span className="ml-1.5 text-xs opacity-75">
+                      ({contests.filter((c) => c.status === key).length})
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+            {/* Type filter */}
+            <div className="flex items-center gap-1.5">
+              {(["all", "weekly", "monthly", "custom"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTypeFilter(t)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all border ${
+                    typeFilter === t
+                      ? t === "weekly"
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : t === "monthly"
+                        ? "bg-violet-600 text-white border-violet-600"
+                        : "bg-slate-700 text-white border-slate-700"
+                      : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  {t === "all" ? "All Types" : t.charAt(0).toUpperCase() + t.slice(1)}
+                  {t !== "all" && (
+                    <span className="ml-1 opacity-75">
+                      ({contests.filter((c) => c.type === t).length})
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
           {isAdmin && (
             <button
               onClick={() => setModal({ ...BLANK_FORM })}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold shadow hover:bg-primary/90 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold shadow hover:bg-primary/90 transition-colors shrink-0"
             >
               <Plus className="w-4 h-4" />
               New Contest
@@ -311,7 +380,9 @@ export default function ContestsPage() {
         ) : (
           <div className="space-y-4">
             {filtered.map((contest) => {
-              const st = STATUS_CFG[contest.status];
+              const st = !contest.isStarted
+                ? { label: "Not Started", cls: "bg-slate-100 text-slate-500 border border-slate-200", dot: "bg-slate-400" }
+                : STATUS_CFG[contest.status];
               return (
                 <div key={contest._id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow group">
                   {/* Banner strip */}
@@ -324,6 +395,11 @@ export default function ContestsPage() {
                             <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
                             {st.label}
                           </span>
+                          {TYPE_BADGE[contest.type ?? "custom"] && (
+                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${TYPE_BADGE[contest.type]!.cls}`}>
+                              {TYPE_BADGE[contest.type]!.label}
+                            </span>
+                          )}
                           {!contest.isPublished && (
                             <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-50 text-yellow-700 border border-yellow-200">
                               Draft
@@ -353,10 +429,7 @@ export default function ContestsPage() {
                             <Users className="w-3 h-3" />
                             {contest.totalRegistrations} registered
                           </span>
-                          {contest.status === "upcoming" && (
-                            <Countdown target={contest.startTime} prefix="Starts in" />
-                          )}
-                          {contest.status === "ongoing" && (
+                          {contest.isStarted && contest.status === "ongoing" && (
                             <Countdown target={contest.endTime} prefix="Ends in" />
                           )}
                         </div>
@@ -385,12 +458,12 @@ export default function ContestsPage() {
                         <Link
                           to={`/contests/${contest.slug}`}
                           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                            contest.status === "ongoing"
+                            contest.isStarted && contest.status === "ongoing"
                               ? "bg-green-600 hover:bg-green-500 text-white shadow-md shadow-green-500/30"
                               : "bg-primary hover:bg-primary/90 text-white shadow"
                           }`}
                         >
-                          {contest.status === "ongoing" ? "Enter" : "View"}
+                          {contest.isStarted && contest.status === "ongoing" ? "Enter" : "View"}
                           <ChevronRight className="w-4 h-4" />
                         </Link>
                       </div>
